@@ -52,6 +52,7 @@ function escapeHtml(str = "") {
 function linkButtonsHtml(m) {
   let html = "";
   if (m.zoomLink) html += `<a class="link-btn zoom" href="${m.zoomLink}" target="_blank" rel="noopener">🔗 Join Zoom</a>`;
+  if (m.virtualBgLink) html += `<a class="link-btn virtualbg" href="${m.virtualBgLink}" target="_blank" rel="noopener">🖼️ Virtual Background</a>`;
   if (m.youtubeLink) html += `<a class="link-btn youtube" href="${m.youtubeLink}" target="_blank" rel="noopener">▶️ YouTube</a>`;
   if (m.materialLink) html += `<a class="link-btn material" href="${m.materialLink}" target="_blank" rel="noopener">📄 Materi</a>`;
   if (m.attendanceLink) html += `<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener">✅ Daftar Hadir</a>`;

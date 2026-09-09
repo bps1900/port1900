@@ -49,7 +49,7 @@ function normalizeTime(value) {
 // Validasi input jam dari form (harus format 24 jam HH:mm, mis. "09:00" / "14:30").
 function isValidTime24(str) {
   if (!str) return true; // jam boleh kosong
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(str.trim());
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(str.trim());
 }
 
 /* ---------------- AUTH ---------------- */
@@ -190,6 +190,7 @@ function renderTable() {
   sorted.forEach((m) => {
     const links = [
       m.zoomLink && "Zoom",
+      m.virtualBgLink && "Virtual BG",
       m.youtubeLink && "YouTube",
       m.materialLink && "Materi",
       m.attendanceLink && "Daftar Hadir",
@@ -246,6 +247,7 @@ function openEdit(id) {
   document.getElementById("time").value = m.time || "";
   document.getElementById("description").value = m.description || "";
   document.getElementById("zoomLink").value = m.zoomLink || "";
+  document.getElementById("virtualBgLink").value = m.virtualBgLink || "";
   document.getElementById("youtubeLink").value = m.youtubeLink || "";
   document.getElementById("materialLink").value = m.materialLink || "";
   document.getElementById("attendanceLink").value = m.attendanceLink || "";
@@ -274,6 +276,7 @@ meetingForm.addEventListener("submit", async (e) => {
     time: timeVal,
     description: document.getElementById("description").value.trim(),
     zoomLink: document.getElementById("zoomLink").value.trim(),
+    virtualBgLink: document.getElementById("virtualBgLink").value.trim(),
     youtubeLink: document.getElementById("youtubeLink").value.trim(),
     materialLink: document.getElementById("materialLink").value.trim(),
     attendanceLink: document.getElementById("attendanceLink").value.trim(),
