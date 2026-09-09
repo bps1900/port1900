@@ -94,7 +94,7 @@ button{ font-family:inherit; cursor:pointer; }
   -webkit-tap-highlight-color:transparent;
 }
 .admin-link-img img{
-  height:38px; width:auto; max-width:120px; object-fit:contain;
+  height:58px; width:auto; max-width:220px; object-fit:contain;
   display:block; transition:transform .15s ease, opacity .15s ease;
 }
 .admin-link-img:hover img,
@@ -170,10 +170,10 @@ button{ font-family:inherit; cursor:pointer; }
 
 /* ---------- Footer (+ sponsor logo di tengah bawah) ---------- */
 footer.site-footer{
-  text-align:center; padding:26px; color:var(--text-muted); font-size:.82rem;
+  text-align:center; padding:26px 26px 60px; color:var(--text-muted); font-size:.82rem;
 }
 .footer-sponsor{
-  display:block; margin:0 auto; height:48px; width:auto; max-width:90%;
+  display:block; margin:20px auto 0; height:30px; width:auto; max-width:90%;
   object-fit:contain; opacity:.85;
 }
 
@@ -289,7 +289,7 @@ footer.site-footer{
   .topbar{ padding:12px 16px; }
   .brand{ font-size:.92rem; gap:8px; }
   .brand-mark{ width:28px; height:28px; }
-  .admin-link-img img{ height:30px; max-width:90px; }
+  .admin-link-img img{ height:44px; max-width:150px; }
 
   .hero-band, .toolbar, .timeline{ padding-left:16px; padding-right:16px; }
   .toolbar{ flex-direction:column; align-items:stretch; }
@@ -304,12 +304,12 @@ footer.site-footer{
 
   .toast{ right:16px; left:16px; bottom:16px; }
 
-  .footer-sponsor{ height:38px; }
+  .footer-sponsor{ height:24px; }
 }
 
 @media (max-width: 420px){
   .brand span{ max-width:120px; }
-  .admin-link-img img{ height:26px; max-width:72px; }
+  .admin-link-img img{ height:36px; max-width:110px; }
   .day-label span{ font-size:.88rem; }
   .meeting-title{ font-size:.98rem; }
 }
