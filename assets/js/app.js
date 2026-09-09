@@ -108,4 +108,48 @@ async function init() {
 document.getElementById("searchInput").addEventListener("input", render);
 document.getElementById("filterStatus").addEventListener("change", render);
 
+/* ---------- Modal Login Admin ---------- */
+const loginOverlay = document.getElementById("loginOverlay");
+const loginError = document.getElementById("loginError");
+
+function openLogin() {
+  loginError.classList.add("hidden");
+  document.getElementById("loginForm").reset();
+  loginOverlay.classList.remove("hidden");
+  document.getElementById("username").focus();
+}
+function closeLogin() {
+  loginOverlay.classList.add("hidden");
+}
+
+document.getElementById("openLoginBtn").addEventListener("click", openLogin);
+document.getElementById("closeLoginBtn").addEventListener("click", closeLogin);
+loginOverlay.addEventListener("click", (e) => {
+  if (e.target === loginOverlay) closeLogin();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !loginOverlay.classList.contains("hidden")) closeLogin();
+});
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!CONFIG.API_URL || CONFIG.API_URL.includes("PASTE_URL")) {
+    loginError.textContent = "API_URL belum diatur di assets/js/config.js.";
+    loginError.classList.remove("hidden");
+    return;
+  }
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  loginError.classList.add("hidden");
+
+  const res = await Api.login(username, password);
+  if (res.success) {
+    Api.setToken(res.token);
+    window.location.href = "admin/index.html";
+  } else {
+    loginError.textContent = res.message || "Username atau password salah.";
+    loginError.classList.remove("hidden");
+  }
+});
+
 init();

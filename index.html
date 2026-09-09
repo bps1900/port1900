@@ -13,8 +13,29 @@
     <img src="assets/img/logo.png" alt="Logo" class="brand-mark" />
     <span id="orgName">Microsite Rapat</span>
   </div>
-  <a href="admin/index.html" class="admin-link">Login Admin</a>
+  <button type="button" id="openLoginBtn" class="admin-link">Login Admin</button>
 </div>
+
+<!-- ===== MODAL LOGIN ADMIN ===== -->
+<div class="overlay hidden" id="loginOverlay">
+  <div class="panel login-panel">
+    <button type="button" class="modal-close" id="closeLoginBtn" aria-label="Tutup">&times;</button>
+    <h3>Login Admin</h3>
+    <div class="error-msg hidden" id="loginError"></div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="btn btn-primary" style="width:100%" type="submit">Masuk</button>
+    </form>
+  </div>
+</div>
+
 
 <section class="hero-band">
   <div class="hero-meta">

@@ -57,11 +57,12 @@ button{ font-family:inherit; cursor:pointer; }
   width:34px; height:34px; border-radius:8px;
   object-fit:contain; display:block; flex-shrink:0;
 }
-.topbar a.admin-link{
+.topbar button.admin-link{
   font-size:.85rem; font-weight:700; color:#fff;
   padding:9px 18px; border-radius:999px; background:var(--blue); border:none;
+  font-family:inherit; cursor:pointer;
 }
-.topbar a.admin-link:hover{ text-decoration:none; background:var(--orange); color:#fff; }
+.topbar button.admin-link:hover{ background:var(--orange); color:#fff; }
 
 /* ---------- Hero ---------- */
 .hero-band{ background:#fff; padding:18px 24px; max-width:920px; margin:0 auto; }
@@ -171,14 +172,21 @@ footer.site-footer{ text-align:center; padding:26px; color:var(--text-muted); fo
 
 /* Modal / panel form */
 .overlay{
-  position:fixed; inset:0; background:rgba(11,37,69,.45); display:flex;
+  position:fixed; inset:0; background:rgba(11,37,69,.45); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex;
   align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; z-index:50;
 }
 .hidden{ display:none !important; }
 .panel{
   background:var(--surface); border-radius:var(--radius-md); width:100%; max-width:560px;
-  padding:26px 28px; box-shadow:0 20px 60px rgba(11,37,69,.3);
+  padding:26px 28px; box-shadow:0 20px 60px rgba(11,37,69,.3); position:relative;
 }
+.login-panel{ max-width:380px; }
+.modal-close{
+  position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:50%;
+  border:none; background:var(--bg); color:var(--text-muted); font-size:1.3rem; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+}
+.modal-close:hover{ background:var(--orange); color:#fff; }
 .panel h3{ margin-bottom:18px; }
 .field{ margin-bottom:14px; }
 .field label{ display:block; font-size:.82rem; font-weight:600; color:var(--navy); margin-bottom:6px; }
