@@ -54,6 +54,7 @@ function linkButtonsHtml(m) {
   if (m.zoomLink) html += `<a class="link-btn zoom" href="${m.zoomLink}" target="_blank" rel="noopener">🔗 Join Zoom</a>`;
   if (m.youtubeLink) html += `<a class="link-btn youtube" href="${m.youtubeLink}" target="_blank" rel="noopener">▶️ YouTube</a>`;
   if (m.materialLink) html += `<a class="link-btn material" href="${m.materialLink}" target="_blank" rel="noopener">📄 Materi</a>`;
+  if (m.attendanceLink) html += `<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener">✅ Daftar Hadir</a>`;
   if (m.otherLink) html += `<a class="link-btn" href="${m.otherLink}" target="_blank" rel="noopener">🔗 Link lain</a>`;
   return html || `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
 }

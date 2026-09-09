@@ -36,13 +36,20 @@ function normalizeDate(value) {
   return wib.toISOString().slice(0, 10);
 }
 
+// Selalu dikembalikan dalam format 24 jam "HH:mm" (bukan AM/PM).
 function normalizeTime(value) {
   if (!value) return "";
-  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5); // sudah plain time
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5); // sudah plain time 24 jam
   const d = new Date(value);
   if (isNaN(d)) return "";
   const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
   return wib.toISOString().slice(11, 16); // HH:MM, format 24 jam
+}
+
+// Validasi input jam dari form (harus format 24 jam HH:mm, mis. "09:00" / "14:30").
+function isValidTime24(str) {
+  if (!str) return true; // jam boleh kosong
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(str.trim());
 }
 
 /* ---------------- AUTH ---------------- */
@@ -185,6 +192,7 @@ function renderTable() {
       m.zoomLink && "Zoom",
       m.youtubeLink && "YouTube",
       m.materialLink && "Materi",
+      m.attendanceLink && "Daftar Hadir",
       m.otherLink && "Lainnya",
     ].filter(Boolean).join(", ") || "—";
 
@@ -208,6 +216,18 @@ function renderTable() {
 /* ---------------- FORM (ADD / EDIT) ---------------- */
 
 const meetingForm = document.getElementById("meetingForm");
+const timeInput = document.getElementById("time");
+
+// Rapikan otomatis input jam saat user selesai mengetik (blur),
+// misal "9:5" -> "09:05", biar tetap konsisten format 24 jam.
+timeInput.addEventListener("blur", () => {
+  const val = timeInput.value.trim();
+  if (!val) return;
+  const match = val.match(/^([0-1]?\d|2[0-3]):([0-5]?\d)$/);
+  if (match) {
+    timeInput.value = match[1].padStart(2, "0") + ":" + match[2].padStart(2, "0");
+  }
+});
 
 function openAdd() {
   document.getElementById("formTitle").textContent = "Tambah Rapat";
@@ -228,6 +248,7 @@ function openEdit(id) {
   document.getElementById("zoomLink").value = m.zoomLink || "";
   document.getElementById("youtubeLink").value = m.youtubeLink || "";
   document.getElementById("materialLink").value = m.materialLink || "";
+  document.getElementById("attendanceLink").value = m.attendanceLink || "";
   document.getElementById("otherLink").value = m.otherLink || "";
   document.getElementById("status").value = m.status || "upcoming";
   formOverlay.classList.remove("hidden");
@@ -238,15 +259,24 @@ document.getElementById("cancelFormBtn").addEventListener("click", () => formOve
 
 meetingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const timeVal = timeInput.value.trim();
+  if (!isValidTime24(timeVal)) {
+    showToast("Format jam salah. Pakai format 24 jam, contoh: 14:30");
+    timeInput.focus();
+    return;
+  }
+
   const id = document.getElementById("meetingId").value;
   const data = {
     title: document.getElementById("title").value.trim(),
     date: document.getElementById("date").value,
-    time: document.getElementById("time").value,
+    time: timeVal,
     description: document.getElementById("description").value.trim(),
     zoomLink: document.getElementById("zoomLink").value.trim(),
     youtubeLink: document.getElementById("youtubeLink").value.trim(),
     materialLink: document.getElementById("materialLink").value.trim(),
+    attendanceLink: document.getElementById("attendanceLink").value.trim(),
     otherLink: document.getElementById("otherLink").value.trim(),
     status: document.getElementById("status").value,
   };

@@ -66,51 +66,64 @@
 
 <!-- ===== MODAL FORM ===== -->
 <div class="overlay hidden" id="formOverlay">
-  <div class="panel">
+  <div class="panel panel-wide">
     <h3 id="formTitle">Tambah Rapat</h3>
     <form id="meetingForm">
       <input type="hidden" id="meetingId" />
-      <div class="field">
-        <label for="title">Judul Rapat *</label>
-        <input id="title" required placeholder="Contoh: Rapat Koordinasi Mingguan" />
-      </div>
-      <div class="field-row">
+
+      <div class="form-grid">
+        <div class="field field-full">
+          <label for="title">Judul Rapat *</label>
+          <input id="title" required placeholder="Contoh: Rapat Koordinasi Mingguan" />
+        </div>
+
         <div class="field">
           <label for="date">Tanggal *</label>
           <input id="date" type="date" required />
         </div>
         <div class="field">
-          <label for="time">Jam</label>
-          <input id="time" type="time" />
+          <label for="time">Jam (WIB, format 24 jam)</label>
+          <input id="time" type="text" inputmode="numeric" placeholder="14:30"
+                 pattern="^([01]\d|2[0-3]):[0-5]\d$"
+                 title="Format 24 jam, contoh: 09:00 atau 14:30" maxlength="5" />
+        </div>
+
+        <div class="field field-full">
+          <label for="description">Deskripsi</label>
+          <textarea id="description" placeholder="Agenda singkat rapat..."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="zoomLink">Link Zoom / Meeting</label>
+          <input id="zoomLink" type="url" placeholder="https://zoom.us/j/..." />
+        </div>
+        <div class="field">
+          <label for="youtubeLink">Link YouTube (rekaman)</label>
+          <input id="youtubeLink" type="url" placeholder="https://youtube.com/..." />
+        </div>
+
+        <div class="field">
+          <label for="materialLink">Link Materi (Drive/PDF/Slide)</label>
+          <input id="materialLink" type="url" placeholder="https://drive.google.com/..." />
+        </div>
+        <div class="field">
+          <label for="attendanceLink">Link Daftar Hadir *</label>
+          <input id="attendanceLink" type="url" required placeholder="https://forms.gle/..." />
+        </div>
+
+        <div class="field">
+          <label for="otherLink">Link Lainnya</label>
+          <input id="otherLink" type="url" placeholder="https://..." />
+        </div>
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="upcoming">Akan datang</option>
+            <option value="done">Sudah selesai</option>
+          </select>
         </div>
       </div>
-      <div class="field">
-        <label for="description">Deskripsi</label>
-        <textarea id="description" placeholder="Agenda singkat rapat..."></textarea>
-      </div>
-      <div class="field">
-        <label for="zoomLink">Link Zoom / Meeting</label>
-        <input id="zoomLink" type="url" placeholder="https://zoom.us/j/..." />
-      </div>
-      <div class="field">
-        <label for="youtubeLink">Link YouTube (rekaman)</label>
-        <input id="youtubeLink" type="url" placeholder="https://youtube.com/..." />
-      </div>
-      <div class="field">
-        <label for="materialLink">Link Materi (Drive/PDF/Slide)</label>
-        <input id="materialLink" type="url" placeholder="https://drive.google.com/..." />
-      </div>
-      <div class="field">
-        <label for="otherLink">Link Lainnya</label>
-        <input id="otherLink" type="url" placeholder="https://..." />
-      </div>
-      <div class="field">
-        <label for="status">Status</label>
-        <select id="status">
-          <option value="upcoming">Akan datang</option>
-          <option value="done">Sudah selesai</option>
-        </select>
-      </div>
+
       <div class="panel-actions">
         <button type="button" class="btn btn-outline" id="cancelFormBtn">Batal</button>
         <button type="submit" class="btn btn-primary">Simpan</button>
@@ -121,8 +134,8 @@
 
 <div class="toast hidden" id="toast"></div>
 
-<script src="../assets/js/config.js?v=2"></script>
-<script src="../assets/js/api.js?v=2"></script>
-<script src="../assets/js/admin.js?v=2"></script>
+<script src="../assets/js/config.js?v=3"></script>
+<script src="../assets/js/api.js?v=3"></script>
+<script src="../assets/js/admin.js?v=3"></script>
 </body>
 </html>
