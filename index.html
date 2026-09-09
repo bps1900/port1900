@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jadwal & Materi Rapat</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">R</div>
+    <span id="orgName">Microsite Rapat</span>
+  </div>
+  <a href="admin/index.html" class="admin-link">Login Admin</a>
+</div>
+
+<section class="hero">
+  <h1>Jadwal &amp; materi rapat, dalam satu tempat.</h1>
+  <p class="lead">Cek link Zoom, rekaman YouTube, dan materi untuk setiap rapat yang akan atau sudah berlangsung.</p>
+  <div class="hero-meta">
+    <span class="pill" id="countUpcoming">0 rapat mendatang</span>
+    <span class="pill orange" id="countToday" style="display:none;">Ada rapat hari ini</span>
+  </div>
+</section>
+
+<div class="toolbar">
+  <input type="search" id="searchInput" placeholder="Cari judul rapat..." />
+  <select id="filterStatus">
+    <option value="all">Semua</option>
+    <option value="upcoming">Akan datang</option>
+    <option value="done">Sudah selesai</option>
+  </select>
+</div>
+
+<div class="timeline" id="timeline">
+  <p style="margin-left:74px;color:var(--text-muted)">Memuat jadwal rapat...</p>
+</div>
+
+<footer class="site-footer">
+  Dikelola lewat panel admin &middot; data tersimpan di Google Sheets
+</footer>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

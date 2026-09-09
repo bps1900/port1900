@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Microsite Rapat</title>
+<link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-shell" id="loginShell">
+  <div class="login-card">
+    <div class="brand"><div class="brand-mark">R</div><span>Admin Panel</span></div>
+    <h2>Masuk ke panel admin</h2>
+    <p class="sub">Kelola jadwal, link Zoom, YouTube, dan materi rapat.</p>
+    <div class="error-msg hidden" id="loginError"></div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="btn btn-primary" style="width:100%" type="submit">Masuk</button>
+    </form>
+    <p class="hint-msg">Lupa akun admin? Atur ulang di sheet "Admins" pada Google Sheets.</p>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="admin-shell hidden" id="dashboardShell">
+  <aside class="admin-sidebar">
+    <div class="brand"><div class="brand-mark">R</div><span>Admin Panel</span></div>
+    <nav>
+      <button class="active">📅 Daftar Rapat</button>
+    </nav>
+    <button class="logout-btn" id="logoutBtn">Keluar</button>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-header">
+      <div>
+        <h2 style="margin-bottom:2px;">Daftar Rapat</h2>
+        <p style="margin:0;font-size:.88rem;">Tambah, ubah, atau hapus jadwal rapat di sini.</p>
+      </div>
+      <button class="btn btn-primary" id="addMeetingBtn">+ Tambah Rapat</button>
+    </div>
+
+    <div id="tableWrap">
+      <p>Memuat data...</p>
+    </div>
+  </main>
+</div>
+
+<!-- ===== MODAL FORM ===== -->
+<div class="overlay hidden" id="formOverlay">
+  <div class="panel">
+    <h3 id="formTitle">Tambah Rapat</h3>
+    <form id="meetingForm">
+      <input type="hidden" id="meetingId" />
+      <div class="field">
+        <label for="title">Judul Rapat *</label>
+        <input id="title" required placeholder="Contoh: Rapat Koordinasi Mingguan" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="date">Tanggal *</label>
+          <input id="date" type="date" required />
+        </div>
+        <div class="field">
+          <label for="time">Jam</label>
+          <input id="time" type="time" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="description">Deskripsi</label>
+        <textarea id="description" placeholder="Agenda singkat rapat..."></textarea>
+      </div>
+      <div class="field">
+        <label for="zoomLink">Link Zoom / Meeting</label>
+        <input id="zoomLink" type="url" placeholder="https://zoom.us/j/..." />
+      </div>
+      <div class="field">
+        <label for="youtubeLink">Link YouTube (rekaman)</label>
+        <input id="youtubeLink" type="url" placeholder="https://youtube.com/..." />
+      </div>
+      <div class="field">
+        <label for="materialLink">Link Materi (Drive/PDF/Slide)</label>
+        <input id="materialLink" type="url" placeholder="https://drive.google.com/..." />
+      </div>
+      <div class="field">
+        <label for="otherLink">Link Lainnya</label>
+        <input id="otherLink" type="url" placeholder="https://..." />
+      </div>
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status">
+          <option value="upcoming">Akan datang</option>
+          <option value="done">Sudah selesai</option>
+        </select>
+      </div>
+      <div class="panel-actions">
+        <button type="button" class="btn btn-outline" id="cancelFormBtn">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/admin.js"></script>
+</body>
+</html>
