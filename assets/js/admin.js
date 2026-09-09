@@ -33,6 +33,13 @@ function checkApiConfigured() {
   return true;
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
 async function tryAutoLogin() {
   // Kalau API belum dikonfigurasi, langsung tampilkan form login dengan pesan error
   if (!checkApiConfigured()) {
@@ -50,21 +57,27 @@ async function tryAutoLogin() {
     return;
   }
 
-  // Ada token -> validasi ke server dulu, jangan tampilkan form login dulu
+  // Ada token -> validasi ke server dulu, jangan tampilkan form login dulu.
+  // Dikasih batas waktu 15 detik supaya tidak macet selamanya kalau
+  // Google Apps Script sedang "cold start" / lambat merespons.
   try {
-    const res = await Api.listMeetingsAdmin();
-    checkingShell.classList.add("hidden");
+    const res = await withTimeout(Api.listMeetingsAdmin(), 15000);
 
     if (res.success) {
       showDashboard();
     } else {
       Api.clearToken();
+      checkingShell.classList.add("hidden");
       loginShell.classList.remove("hidden");
     }
   } catch (err) {
+    // Timeout atau error jaringan -> jangan hapus token (mungkin cuma lambat),
+    // tapi tampilkan form login supaya user tidak terjebak di layar loading.
     checkingShell.classList.add("hidden");
-    Api.clearToken();
     loginShell.classList.remove("hidden");
+    const errBox = document.getElementById("loginError");
+    errBox.textContent = "Gagal terhubung ke server (mungkin sedang lambat). Silakan login ulang.";
+    errBox.classList.remove("hidden");
   }
 }
 
@@ -76,13 +89,30 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const errBox = document.getElementById("loginError");
   errBox.classList.add("hidden");
 
-  const res = await Api.login(username, password);
-  if (res.success) {
-    Api.setToken(res.token);
-    showDashboard();
-  } else {
-    errBox.textContent = res.message || "Username atau password salah.";
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  const originalLabel = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.style.display = "inline-flex";
+  submitBtn.style.alignItems = "center";
+  submitBtn.style.justifyContent = "center";
+  submitBtn.innerHTML = `<span class="spinner sm" style="border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>Memproses...`;
+
+  try {
+    const res = await Api.login(username, password);
+    if (res.success) {
+      Api.setToken(res.token);
+      showDashboard();
+      return;
+    } else {
+      errBox.textContent = res.message || "Username atau password salah.";
+      errBox.classList.remove("hidden");
+    }
+  } catch (err) {
+    errBox.textContent = "Gagal terhubung ke server. Coba lagi.";
     errBox.classList.remove("hidden");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
   }
 });
 
@@ -92,8 +122,8 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 });
 
 function showDashboard() {
-  loginShell.classList.add("hidden");
   checkingShell.classList.add("hidden");
+  loginShell.classList.add("hidden");
   dashboardShell.classList.remove("hidden");
   loadMeetings();
 }
@@ -101,7 +131,7 @@ function showDashboard() {
 /* ---------------- LIST / TABLE ---------------- */
 
 async function loadMeetings() {
-  tableWrap.innerHTML = "<p>Memuat data...</p>";
+  tableWrap.innerHTML = `<div class="loading-block"><div class="spinner"></div><p>Memuat data...</p></div>`;
   const res = await Api.listMeetingsAdmin();
   if (!res.success) {
     tableWrap.innerHTML = `<p style="color:#C0392B">Gagal memuat data: ${escapeHtml(res.message || "")}</p>`;
@@ -193,14 +223,28 @@ meetingForm.addEventListener("submit", async (e) => {
     status: document.getElementById("status").value,
   };
 
-  const res = id ? await Api.updateMeeting(id, data) : await Api.createMeeting(data);
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  const originalLabel = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.style.display = "inline-flex";
+  submitBtn.style.alignItems = "center";
+  submitBtn.style.justifyContent = "center";
+  submitBtn.innerHTML = `<span class="spinner sm" style="border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>Menyimpan...`;
 
-  if (res.success) {
-    formOverlay.classList.add("hidden");
-    showToast(id ? "Rapat berhasil diubah." : "Rapat berhasil ditambahkan.");
-    loadMeetings();
-  } else {
-    showToast(res.message || "Gagal menyimpan data.");
+  try {
+    const res = id ? await Api.updateMeeting(id, data) : await Api.createMeeting(data);
+    if (res.success) {
+      formOverlay.classList.add("hidden");
+      showToast(id ? "Rapat berhasil diubah." : "Rapat berhasil ditambahkan.");
+      loadMeetings();
+    } else {
+      showToast(res.message || "Gagal menyimpan data.");
+    }
+  } catch (err) {
+    showToast("Gagal terhubung ke server.");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
   }
 });
 

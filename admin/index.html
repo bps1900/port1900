@@ -10,7 +10,11 @@
 
 <!-- ===== SEDANG MEMERIKSA SESI LOGIN ===== -->
 <div class="login-shell" id="checkingShell">
-  <p style="color:var(--text-muted);">Memeriksa sesi login...</p>
+  <div class="loading-block">
+    <div class="spinner"></div>
+    <p style="margin-bottom:4px;">Memeriksa sesi login...</p>
+    <p style="font-size:.78rem;">Jika terlalu lama, server mungkin baru "bangun" (cold start).</p>
+  </div>
 </div>
 
 <!-- ===== LOGIN ===== -->
@@ -117,8 +121,8 @@
 
 <div class="toast hidden" id="toast"></div>
 
-<script src="../assets/js/config.js"></script>
-<script src="../assets/js/api.js"></script>
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/config.js?v=2"></script>
+<script src="../assets/js/api.js?v=2"></script>
+<script src="../assets/js/admin.js?v=2"></script>
 </body>
 </html>

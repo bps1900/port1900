@@ -142,13 +142,30 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const password = document.getElementById("password").value;
   loginError.classList.add("hidden");
 
-  const res = await Api.login(username, password);
-  if (res.success) {
-    Api.setToken(res.token);
-    window.location.href = "admin/index.html";
-  } else {
-    loginError.textContent = res.message || "Username atau password salah.";
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  const originalLabel = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `<span class="spinner sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>Memproses...`;
+  submitBtn.style.display = "inline-flex";
+  submitBtn.style.alignItems = "center";
+  submitBtn.style.justifyContent = "center";
+
+  try {
+    const res = await Api.login(username, password);
+    if (res.success) {
+      Api.setToken(res.token);
+      window.location.href = "admin/index.html";
+      return;
+    } else {
+      loginError.textContent = res.message || "Username atau password salah.";
+      loginError.classList.remove("hidden");
+    }
+  } catch (err) {
+    loginError.textContent = "Gagal terhubung ke server. Coba lagi.";
     loginError.classList.remove("hidden");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
   }
 });
 

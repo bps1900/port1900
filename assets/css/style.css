@@ -23,6 +23,21 @@
   --focus: 0 0 0 3px rgba(46,111,236,.35);
 }
 
+/* ---------- Loading spinner ---------- */
+.spinner{
+  width:34px; height:34px; border-radius:50%;
+  border:3px solid var(--line); border-top-color:var(--blue);
+  animation:spin .8s linear infinite;
+  margin:0 auto 14px;
+}
+.spinner.sm{ width:20px; height:20px; border-width:2px; margin:0 10px 0 0; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.loading-block{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:26px; color:var(--text-muted); text-align:center;
+}
+.loading-inline{ display:flex; align-items:center; color:var(--text-muted); }
+
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
 body{
