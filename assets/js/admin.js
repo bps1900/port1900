@@ -2,6 +2,7 @@
  * Logic panel admin: login, tampilkan tabel rapat, tambah/ubah/hapus.
  */
 
+const checkingShell = document.getElementById("checkingShell");
 const loginShell = document.getElementById("loginShell");
 const dashboardShell = document.getElementById("dashboardShell");
 const formOverlay = document.getElementById("formOverlay");
@@ -33,13 +34,37 @@ function checkApiConfigured() {
 }
 
 async function tryAutoLogin() {
-  if (!checkApiConfigured()) return;
-  if (!Api.getToken()) return;
-  const res = await Api.listMeetingsAdmin();
-  if (res.success) {
-    showDashboard();
-  } else {
+  // Kalau API belum dikonfigurasi, langsung tampilkan form login dengan pesan error
+  if (!checkApiConfigured()) {
+    checkingShell.classList.add("hidden");
+    loginShell.classList.remove("hidden");
+    return;
+  }
+
+  const token = Api.getToken();
+
+  // Tidak ada token tersimpan -> memang belum login, tampilkan form login
+  if (!token) {
+    checkingShell.classList.add("hidden");
+    loginShell.classList.remove("hidden");
+    return;
+  }
+
+  // Ada token -> validasi ke server dulu, jangan tampilkan form login dulu
+  try {
+    const res = await Api.listMeetingsAdmin();
+    checkingShell.classList.add("hidden");
+
+    if (res.success) {
+      showDashboard();
+    } else {
+      Api.clearToken();
+      loginShell.classList.remove("hidden");
+    }
+  } catch (err) {
+    checkingShell.classList.add("hidden");
     Api.clearToken();
+    loginShell.classList.remove("hidden");
   }
 }
 
@@ -68,6 +93,7 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 
 function showDashboard() {
   loginShell.classList.add("hidden");
+  checkingShell.classList.add("hidden");
   dashboardShell.classList.remove("hidden");
   loadMeetings();
 }
