@@ -21,6 +21,30 @@ function escapeHtml(str = "") {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/**
+ * Google Apps Script mengirim tanggal/jam sebagai objek Date yang otomatis
+ * diserialisasi ke ISO string UTC (mis. "2026-09-10T17:00:00.000Z").
+ * Karena data sebenarnya dalam zona WIB (UTC+7), kita koreksi +7 jam
+ * lalu ambil bagian tanggal / jam yang relevan.
+ */
+function normalizeDate(value) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value; // sudah plain date
+  const d = new Date(value);
+  if (isNaN(d)) return "";
+  const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  return wib.toISOString().slice(0, 10);
+}
+
+function normalizeTime(value) {
+  if (!value) return "";
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5); // sudah plain time
+  const d = new Date(value);
+  if (isNaN(d)) return "";
+  const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  return wib.toISOString().slice(11, 16); // HH:MM, format 24 jam
+}
+
 /* ---------------- AUTH ---------------- */
 
 function checkApiConfigured() {
@@ -118,7 +142,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
   Api.logout();
-  location.reload();
+  window.location.href = "../index.html";
 });
 
 function showDashboard() {
@@ -137,7 +161,11 @@ async function loadMeetings() {
     tableWrap.innerHTML = `<p style="color:#C0392B">Gagal memuat data: ${escapeHtml(res.message || "")}</p>`;
     return;
   }
-  MEETINGS = res.data || [];
+  MEETINGS = (res.data || []).map((m) => ({
+    ...m,
+    date: normalizeDate(m.date),
+    time: normalizeTime(m.time),
+  }));
   renderTable();
 }
 
