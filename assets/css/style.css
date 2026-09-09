@@ -49,21 +49,22 @@ button{ font-family:inherit; cursor:pointer; }
 /* ---------- Top bar ---------- */
 .topbar{
   display:flex; align-items:center; justify-content:space-between;
-  padding:18px 24px; background:var(--navy);
+  padding:16px 24px; background:#fff;
+  border-bottom:3px solid; border-image:linear-gradient(90deg,var(--blue),var(--green),var(--orange)) 1;
 }
-.brand{ display:flex; align-items:center; gap:10px; font-family:'Sora',sans-serif; font-weight:700; color:#fff; font-size:1.05rem; }
+.brand{ display:flex; align-items:center; gap:10px; font-family:'Sora',sans-serif; font-weight:700; color:var(--navy); font-size:1.05rem; }
 .brand-mark{
   width:34px; height:34px; border-radius:8px;
   object-fit:contain; display:block; flex-shrink:0;
 }
 .topbar a.admin-link{
-  font-size:.85rem; font-weight:700; color:var(--navy);
-  padding:9px 18px; border-radius:999px; background:#fff; border:none;
+  font-size:.85rem; font-weight:700; color:#fff;
+  padding:9px 18px; border-radius:999px; background:var(--blue); border:none;
 }
 .topbar a.admin-link:hover{ text-decoration:none; background:var(--orange); color:#fff; }
 
 /* ---------- Hero ---------- */
-.hero-band{ background:var(--blue); padding:40px 0 0; position:relative; }
+.hero-band{ background:linear-gradient(120deg, var(--blue) 0%, var(--blue) 45%, var(--green) 78%, var(--orange) 100%); padding:40px 0 0; position:relative; }
 .hero{ padding:0 0 64px; max-width:920px; margin:0 auto; padding-left:24px; padding-right:24px; }
 .hero h1{ font-size:2.1rem; max-width:16ch; color:#fff; }
 .hero p.lead{ font-size:1.05rem; max-width:52ch; color:rgba(255,255,255,.85); }
