@@ -66,18 +66,40 @@ button{ font-family:inherit; cursor:pointer; }
   display:flex; align-items:center; justify-content:space-between;
   padding:16px 24px; background:#fff;
   border-bottom:1px solid var(--line);
+  gap:12px;
 }
-.brand{ display:flex; align-items:center; gap:10px; font-family:'Sora',sans-serif; font-weight:700; color:var(--navy); font-size:1.05rem; }
+.brand{ display:flex; align-items:center; gap:10px; font-family:'Sora',sans-serif; font-weight:700; color:var(--navy); font-size:1.05rem; min-width:0; }
 .brand-mark{
   width:34px; height:34px; border-radius:8px;
   object-fit:contain; display:block; flex-shrink:0;
 }
+.brand span{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
 .topbar button.admin-link{
   font-size:.85rem; font-weight:700; color:#fff;
   padding:9px 18px; border-radius:999px; background:var(--blue); border:none;
-  font-family:inherit; cursor:pointer;
+  font-family:inherit; cursor:pointer; flex-shrink:0;
 }
 .topbar button.admin-link:hover{ background:var(--orange); color:#fff; }
+
+/* Tombol login berupa gambar (bps.png), tanpa teks/background,
+   supaya terlihat seperti logo biasa dan tidak mencolok sebagai
+   "tombol admin" bagi pengunjung umum. */
+.admin-link-img{
+  background:none; border:none; padding:0; margin:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  flex-shrink:0; border-radius:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.admin-link-img img{
+  height:38px; width:auto; max-width:120px; object-fit:contain;
+  display:block; transition:transform .15s ease, opacity .15s ease;
+}
+.admin-link-img:hover img,
+.admin-link-img:focus-visible img{ transform:scale(1.06); opacity:.85; }
+.admin-link-img:active img{ transform:scale(.96); }
 
 /* ---------- Hero ---------- */
 .hero-band{ background:#fff; padding:18px 24px; max-width:920px; margin:0 auto; }
@@ -145,7 +167,14 @@ button{ font-family:inherit; cursor:pointer; }
   border:1px dashed var(--line); border-radius:var(--radius-md); background:var(--surface);
 }
 
-footer.site-footer{ text-align:center; padding:26px; color:var(--text-muted); font-size:.82rem; }
+/* ---------- Footer (+ sponsor logo di tengah bawah) ---------- */
+footer.site-footer{
+  text-align:center; padding:26px; color:var(--text-muted); font-size:.82rem;
+}
+.footer-sponsor{
+  display:block; margin:0 auto; height:48px; width:auto; max-width:90%;
+  object-fit:contain; opacity:.85;
+}
 
 /* =========================================================
    ADMIN
@@ -227,7 +256,7 @@ footer.site-footer{ text-align:center; padding:26px; color:var(--text-muted); fo
 .panel-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
 
 /* Login screen */
-.login-shell{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); }
+.login-shell{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:20px; }
 .login-card{ width:100%; max-width:380px; background:var(--surface); padding:34px 30px; border-radius:var(--radius-md); box-shadow:var(--shadow); }
 .login-card .brand{ justify-content:center; margin-bottom:18px; }
 .login-card h2{ text-align:center; font-size:1.3rem; }
@@ -236,10 +265,14 @@ footer.site-footer{ text-align:center; padding:26px; color:var(--text-muted); fo
 .hint-msg{ font-size:.78rem; color:var(--text-muted); margin-top:16px; text-align:center; }
 
 .toast{
-  position:fixed; bottom:24px; right:24px; background:var(--navy); color:#fff; padding:12px 18px;
+  position:fixed; bottom:24px; right:24px; left:24px; background:var(--navy); color:#fff; padding:12px 18px;
   border-radius:8px; font-size:.88rem; box-shadow:0 8px 24px rgba(0,0,0,.25); z-index:100;
+  text-align:center;
 }
 
+/* =========================================================
+   RESPONSIVE — HP / layar kecil
+   ========================================================= */
 @media (max-width: 720px){
   .admin-shell{ flex-direction:column; }
   .admin-sidebar{ width:100%; flex-direction:row; align-items:center; }
@@ -251,4 +284,31 @@ footer.site-footer{ text-align:center; padding:26px; color:var(--text-muted); fo
   .day-dot{ margin-left:0; }
   .form-grid{ grid-template-columns:1fr; }
   .panel-wide{ max-width:560px; }
+
+  .topbar{ padding:12px 16px; }
+  .brand{ font-size:.92rem; gap:8px; }
+  .brand-mark{ width:28px; height:28px; }
+  .admin-link-img img{ height:30px; max-width:90px; }
+
+  .hero-band, .toolbar, .timeline{ padding-left:16px; padding-right:16px; }
+  .toolbar{ flex-direction:column; align-items:stretch; }
+  .toolbar select{ width:100%; }
+
+  .meeting-card{ padding:15px 16px; }
+  .meeting-top{ flex-direction:column; align-items:flex-start; gap:4px; }
+  .link-btn{ padding:8px 13px; font-size:.8rem; }
+
+  .panel{ padding:20px 18px; }
+  .login-card{ padding:26px 20px; }
+
+  .toast{ right:16px; left:16px; bottom:16px; }
+
+  .footer-sponsor{ height:38px; }
+}
+
+@media (max-width: 420px){
+  .brand span{ max-width:120px; }
+  .admin-link-img img{ height:26px; max-width:72px; }
+  .day-label span{ font-size:.88rem; }
+  .meeting-title{ font-size:.98rem; }
 }
