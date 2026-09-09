@@ -12,7 +12,7 @@
   --green-light: #E4F7F0;
   --orange: #F2994A;      /* highlight / badge "hari ini" */
   --orange-light: #FEF0E2;
-  --bg: #F4F8FB;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
   --line: #E1E9F0;
   --text: #17233B;
@@ -53,10 +53,8 @@ button{ font-family:inherit; cursor:pointer; }
 }
 .brand{ display:flex; align-items:center; gap:10px; font-family:'Sora',sans-serif; font-weight:700; color:#fff; font-size:1.05rem; }
 .brand-mark{
-  width:34px; height:34px; border-radius:10px;
-  background:var(--green);
-  display:flex; align-items:center; justify-content:center;
-  color:#fff; font-weight:800; font-family:'Sora',sans-serif; font-size:.95rem;
+  width:34px; height:34px; border-radius:8px;
+  object-fit:contain; display:block; flex-shrink:0;
 }
 .topbar a.admin-link{
   font-size:.85rem; font-weight:700; color:var(--navy);
