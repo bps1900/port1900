@@ -8,14 +8,38 @@ const dashboardShell = document.getElementById("dashboardShell");
 const formOverlay = document.getElementById("formOverlay");
 const tableWrap = document.getElementById("tableWrap");
 const toastEl = document.getElementById("toast");
+const toastTextEl = document.getElementById("toastText");
+const toastBackdropEl = document.getElementById("toastBackdrop");
 
-let MEETINGS = [];
+let toastHideTimer = null;
 
 function showToast(msg) {
-  toastEl.textContent = msg;
+  clearTimeout(toastHideTimer);
+
+  toastTextEl.textContent = msg;
+  toastBackdropEl.classList.remove("hidden");
   toastEl.classList.remove("hidden");
-  setTimeout(() => toastEl.classList.add("hidden"), 2600);
+
+  // Re-trigger animasi ikon centang setiap kali toast baru muncul
+  const icon = toastEl.querySelector(".toast-icon");
+  icon.style.animation = "none";
+  requestAnimationFrame(() => {
+    icon.style.animation = "";
+    toastBackdropEl.classList.add("show");
+    toastEl.classList.add("show");
+  });
+
+  toastHideTimer = setTimeout(() => {
+    toastBackdropEl.classList.remove("show");
+    toastEl.classList.remove("show");
+    setTimeout(() => {
+      toastBackdropEl.classList.add("hidden");
+      toastEl.classList.add("hidden");
+    }, 250);
+  }, 1300);
 }
+
+let MEETINGS = [];
 
 function escapeHtml(str = "") {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
