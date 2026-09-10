@@ -238,6 +238,65 @@ function renderTable() {
   tableWrap.innerHTML = html;
 }
 
+/* ---------------- LINK LAINNYA (dinamis) ---------------- */
+
+const otherLinksList = document.getElementById("otherLinksList");
+let otherLinkRowSeq = 0;
+
+// "otherLink" disimpan di sheet sebagai JSON string: [{"label":"...","url":"..."}, ...]
+// Kalau datanya bukan JSON (data lama, cuma URL polos), dianggap satu link
+// dengan judul default "Link Lainnya" supaya tetap kompatibel.
+function parseOtherLinks(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((x) => x && (x.url || x.label))
+        .map((x) => ({ label: x.label || "", url: x.url || "" }));
+    }
+  } catch (e) {
+    // bukan JSON -> anggap URL polos (data lama)
+  }
+  return [{ label: "Link Lainnya", url: String(raw) }];
+}
+
+function addOtherLinkRow(label = "", url = "") {
+  const rowId = "otherlink-" + (++otherLinkRowSeq);
+  const row = document.createElement("div");
+  row.className = "other-link-row";
+  row.dataset.rowId = rowId;
+  row.innerHTML = `
+    <input type="text" class="other-link-label" placeholder="Judul (misal: Surat Undangan)" value="${escapeHtml(label)}" />
+    <input type="url" class="other-link-url" placeholder="https://..." value="${escapeHtml(url)}" />
+    <button type="button" class="other-link-remove" aria-label="Hapus link">&times;</button>
+  `;
+  row.querySelector(".other-link-remove").addEventListener("click", () => row.remove());
+  otherLinksList.appendChild(row);
+}
+
+function resetOtherLinks(links = []) {
+  otherLinksList.innerHTML = "";
+  if (links.length === 0) {
+    addOtherLinkRow(); // langsung sediakan 1 baris kosong biar gampang isi
+  } else {
+    links.forEach((l) => addOtherLinkRow(l.label, l.url));
+  }
+}
+
+function collectOtherLinks() {
+  const rows = [...otherLinksList.querySelectorAll(".other-link-row")];
+  const links = rows
+    .map((row) => ({
+      label: row.querySelector(".other-link-label").value.trim(),
+      url: row.querySelector(".other-link-url").value.trim(),
+    }))
+    .filter((l) => l.url); // baris tanpa URL diabaikan
+  return links;
+}
+
+document.getElementById("addOtherLinkBtn").addEventListener("click", () => addOtherLinkRow());
+
 /* ---------------- FORM (ADD / EDIT) ---------------- */
 
 const meetingForm = document.getElementById("meetingForm");
@@ -258,6 +317,7 @@ function openAdd() {
   document.getElementById("formTitle").textContent = "Tambah Rapat";
   meetingForm.reset();
   document.getElementById("meetingId").value = "";
+  resetOtherLinks([]);
   formOverlay.classList.remove("hidden");
 }
 
@@ -275,8 +335,8 @@ function openEdit(id) {
   document.getElementById("youtubeLink").value = m.youtubeLink || "";
   document.getElementById("materialLink").value = m.materialLink || "";
   document.getElementById("attendanceLink").value = m.attendanceLink || "";
-  document.getElementById("otherLink").value = m.otherLink || "";
   document.getElementById("status").value = m.status || "upcoming";
+  resetOtherLinks(parseOtherLinks(m.otherLink));
   formOverlay.classList.remove("hidden");
 }
 
@@ -304,7 +364,7 @@ meetingForm.addEventListener("submit", async (e) => {
     youtubeLink: document.getElementById("youtubeLink").value.trim(),
     materialLink: document.getElementById("materialLink").value.trim(),
     attendanceLink: document.getElementById("attendanceLink").value.trim(),
-    otherLink: document.getElementById("otherLink").value.trim(),
+    otherLink: JSON.stringify(collectOtherLinks()),
     status: document.getElementById("status").value,
   };
 

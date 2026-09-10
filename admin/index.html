@@ -115,10 +115,6 @@
           <label for="attendanceLink">Link Daftar Hadir</label>
           <input id="attendanceLink" type="url" placeholder="https://forms.gle/..." />
         </div>
-        <div class="field">
-          <label for="otherLink">Link Lainnya</label>
-          <input id="otherLink" type="url" placeholder="https://..." />
-        </div>
 
         <div class="field">
           <label for="status">Status</label>
@@ -126,6 +122,12 @@
             <option value="upcoming">Akan datang</option>
             <option value="done">Sudah selesai</option>
           </select>
+        </div>
+
+        <div class="field field-full">
+          <label>Link Lainnya (opsional, boleh lebih dari satu)</label>
+          <div id="otherLinksList"></div>
+          <button type="button" class="btn btn-outline" id="addOtherLinkBtn" style="margin-top:4px;">+ Tambah Link</button>
         </div>
       </div>
 
@@ -143,8 +145,8 @@
   <span class="toast-text" id="toastText"></span>
 </div>
 
-<script src="../assets/js/config.js?v=4"></script>
-<script src="../assets/js/api.js?v=4"></script>
-<script src="../assets/js/admin.js?v=4"></script>
+<script src="../assets/js/config.js?v=6"></script>
+<script src="../assets/js/api.js?v=6"></script>
+<script src="../assets/js/admin.js?v=6"></script>
 </body>
 </html>

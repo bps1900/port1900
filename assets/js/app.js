@@ -49,6 +49,21 @@ function escapeHtml(str = "") {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// "otherLink" disimpan sebagai JSON string: [{"label":"...","url":"..."}, ...]
+// Data lama yang cuma URL polos (bukan JSON) tetap ditampilkan dengan judul default.
+function parseOtherLinks(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((x) => x && x.url).map((x) => ({ label: x.label || "Link Lainnya", url: x.url }));
+    }
+  } catch (e) {
+    // bukan JSON -> data lama, anggap URL polos
+  }
+  return [{ label: "Link Lainnya", url: String(raw) }];
+}
+
 function linkButtonsHtml(m) {
   const btns = [];
   if (m.zoomLink)       btns.push(`<a class="link-btn zoom"       href="${m.zoomLink}"       target="_blank" rel="noopener"><img src="assets/img/zoom.png"          alt="" class="link-btn-icon"> Join Zoom</a>`);
@@ -56,7 +71,9 @@ function linkButtonsHtml(m) {
   if (m.youtubeLink)    btns.push(`<a class="link-btn youtube"    href="${m.youtubeLink}"    target="_blank" rel="noopener"><img src="assets/img/youtube.png"        alt="" class="link-btn-icon"> YouTube</a>`);
   if (m.materialLink)   btns.push(`<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`);
   if (m.attendanceLink) btns.push(`<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`);
-  if (m.otherLink)      btns.push(`<a class="link-btn"            href="${m.otherLink}"      target="_blank" rel="noopener">🔗 Link lain</a>`);
+  parseOtherLinks(m.otherLink).forEach((l) => {
+    btns.push(`<a class="link-btn" href="${l.url}" target="_blank" rel="noopener">🔗 ${escapeHtml(l.label)}</a>`);
+  });
   if (btns.length === 0) return `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
   // Kalau sisa baris terakhir tidak genap 3, tambah spacer div supaya tombol tidak melebar
   const remainder = btns.length % 3;
