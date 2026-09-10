@@ -163,6 +163,7 @@ button{ font-family:inherit; cursor:pointer; }
 .link-btn-icon{
   width:26px; height:26px; object-fit:contain;
   vertical-align:middle; flex-shrink:0;
+  mix-blend-mode: multiply;
 }
 .link-btn.zoom{ background:var(--blue); }
 .link-btn.virtualbg{ background:#7C5CFC; }
