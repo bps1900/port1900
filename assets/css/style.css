@@ -151,14 +151,13 @@ button{ font-family:inherit; cursor:pointer; }
 .meeting-time{ font-size:.85rem; color:var(--text-muted); white-space:nowrap; }
 .meeting-desc{ margin:8px 0 12px; font-size:.92rem; }
 .meeting-links{
-  display:flex; flex-wrap:wrap; gap:8px;
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;
 }
 .link-btn{
   display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:.85rem; font-weight:700;
   padding:9px 12px; border-radius:999px; border:none; color:#fff;
   background:var(--navy); text-align:center; white-space:nowrap;
-  overflow:hidden; text-overflow:ellipsis;
-  flex: 1 1 calc(33.333% - 6px); max-width:calc(33.333% - 6px);
+  overflow:hidden; text-overflow:ellipsis; width:100%;
 }
 .link-btn:hover{ text-decoration:none; opacity:.9; color:#fff; }
 .link-btn-icon{
@@ -171,6 +170,7 @@ button{ font-family:inherit; cursor:pointer; }
 .link-btn.youtube{ background:#E0473E; }
 .link-btn.material{ background:var(--green); }
 .link-btn.attendance{ background:#7C5CFC; }
+.link-btn-spacer{ visibility:hidden; pointer-events:none; }
 
 .empty-state{
   margin-left:74px; padding:26px; text-align:center; color:var(--text-muted);

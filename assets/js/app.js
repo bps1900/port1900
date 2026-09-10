@@ -50,14 +50,20 @@ function escapeHtml(str = "") {
 }
 
 function linkButtonsHtml(m) {
-  let html = "";
-  if (m.zoomLink)       html += `<a class="link-btn zoom"       href="${m.zoomLink}"       target="_blank" rel="noopener"><img src="assets/img/zoom.png"          alt="" class="link-btn-icon"> Join Zoom</a>`;
-  if (m.virtualBgLink)  html += `<a class="link-btn virtualbg"  href="${m.virtualBgLink}"  target="_blank" rel="noopener"><img src="assets/img/vb.png"            alt="" class="link-btn-icon"> Virtual Background</a>`;
-  if (m.youtubeLink)    html += `<a class="link-btn youtube"    href="${m.youtubeLink}"    target="_blank" rel="noopener"><img src="assets/img/youtube.png"        alt="" class="link-btn-icon"> YouTube</a>`;
-  if (m.materialLink)   html += `<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`;
-  if (m.attendanceLink) html += `<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`;
-  if (m.otherLink)      html += `<a class="link-btn"            href="${m.otherLink}"      target="_blank" rel="noopener">🔗 Link lain</a>`;
-  return html || `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
+  const btns = [];
+  if (m.zoomLink)       btns.push(`<a class="link-btn zoom"       href="${m.zoomLink}"       target="_blank" rel="noopener"><img src="assets/img/zoom.png"          alt="" class="link-btn-icon"> Join Zoom</a>`);
+  if (m.virtualBgLink)  btns.push(`<a class="link-btn virtualbg"  href="${m.virtualBgLink}"  target="_blank" rel="noopener"><img src="assets/img/vb.png"            alt="" class="link-btn-icon"> Virtual Background</a>`);
+  if (m.youtubeLink)    btns.push(`<a class="link-btn youtube"    href="${m.youtubeLink}"    target="_blank" rel="noopener"><img src="assets/img/youtube.png"        alt="" class="link-btn-icon"> YouTube</a>`);
+  if (m.materialLink)   btns.push(`<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`);
+  if (m.attendanceLink) btns.push(`<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`);
+  if (m.otherLink)      btns.push(`<a class="link-btn"            href="${m.otherLink}"      target="_blank" rel="noopener">🔗 Link lain</a>`);
+  if (btns.length === 0) return `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
+  // Kalau sisa baris terakhir tidak genap 3, tambah spacer div supaya tombol tidak melebar
+  const remainder = btns.length % 3;
+  if (remainder !== 0) {
+    for (let i = 0; i < 3 - remainder; i++) btns.push(`<div class="link-btn-spacer"></div>`);
+  }
+  return btns.join("");
 }
 
 function render() {
