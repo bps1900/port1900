@@ -160,6 +160,11 @@ button{ font-family:inherit; cursor:pointer; }
   overflow:hidden; text-overflow:ellipsis;
 }
 .link-btn:hover{ text-decoration:none; opacity:.9; color:#fff; }
+.link-btn-icon{
+  width:18px; height:18px; object-fit:contain;
+  vertical-align:middle; flex-shrink:0;
+  filter:brightness(0) invert(1); /* paksa jadi putih supaya cocok di semua warna tombol */
+}
 .link-btn.zoom{ background:var(--blue); }
 .link-btn.virtualbg{ background:#7C5CFC; }
 .link-btn.youtube{ background:#E0473E; }
