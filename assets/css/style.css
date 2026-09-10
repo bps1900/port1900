@@ -151,13 +151,14 @@ button{ font-family:inherit; cursor:pointer; }
 .meeting-time{ font-size:.85rem; color:var(--text-muted); white-space:nowrap; }
 .meeting-desc{ margin:8px 0 12px; font-size:.92rem; }
 .meeting-links{
-  display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;
+  display:flex; flex-wrap:wrap; gap:8px;
 }
 .link-btn{
   display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:.85rem; font-weight:700;
   padding:9px 12px; border-radius:999px; border:none; color:#fff;
-  background:var(--navy); width:100%; text-align:center; white-space:nowrap;
+  background:var(--navy); text-align:center; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis;
+  flex: 1 1 calc(33.333% - 6px); max-width:calc(33.333% - 6px);
 }
 .link-btn:hover{ text-decoration:none; opacity:.9; color:#fff; }
 .link-btn-icon{
@@ -327,8 +328,8 @@ footer.site-footer{
 
   .meeting-card{ padding:15px 16px; }
   .meeting-top{ flex-direction:column; align-items:flex-start; gap:4px; }
-  .meeting-links{ grid-template-columns:repeat(2, 1fr); }
-  .link-btn{ padding:8px 10px; font-size:.8rem; }
+  .meeting-links{ gap:6px; }
+  .link-btn{ padding:8px 10px; font-size:.8rem; flex: 1 1 calc(50% - 4px); max-width:calc(50% - 4px); }
 
   .panel{ padding:20px 18px; }
   .login-card{ padding:26px 20px; }
