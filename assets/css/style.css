@@ -170,7 +170,7 @@ button{ font-family:inherit; cursor:pointer; }
 .link-btn.youtube{ background:#E0473E; }
 .link-btn.material{ background:var(--green); }
 .link-btn.attendance{ background:#7C5CFC; }
-.link-btn-spacer{ visibility:hidden; pointer-events:none; }
+.link-btn-spacer{ visibility:hidden; pointer-events:none; width:100%; }
 
 .empty-state{
   margin-left:74px; padding:26px; text-align:center; color:var(--text-muted);
