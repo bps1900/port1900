@@ -164,11 +164,12 @@ button{ font-family:inherit; cursor:pointer; }
   width:26px; height:26px; object-fit:contain;
   vertical-align:middle; flex-shrink:0;
 }
+.link-btn.attendance .link-btn-icon{ width:32px; height:32px; }
 .link-btn.zoom{ background:var(--blue); }
-.link-btn.virtualbg{ background:#7C5CFC; }
+.link-btn.virtualbg{ background:var(--orange); }
 .link-btn.youtube{ background:#E0473E; }
 .link-btn.material{ background:var(--green); }
-.link-btn.attendance{ background:var(--orange); }
+.link-btn.attendance{ background:#7C5CFC; }
 
 .empty-state{
   margin-left:74px; padding:26px; text-align:center; color:var(--text-muted);
