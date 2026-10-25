@@ -106,8 +106,7 @@ button{ font-family:inherit; cursor:pointer; }
   background:var(--green); color:#fff;
 }
 .pill.orange{ background:var(--orange); color:#fff; }
-.pill.navy{ background:var(--navy); color:#fff; }
-.pill.gray{ background:var(--text-muted); color:#fff; }
+.pill.blue{ background:var(--blue); color:#fff; }
 
 /* ---------- Search / filter ---------- */
 .toolbar{
