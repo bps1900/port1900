@@ -50,3 +50,58 @@
   font-weight: 600;
 }
 .range-toggle input { width: 18px; height: 18px; margin: 0; }
+
+/* =====================================================================
+   TAMPILAN HP (layar <= 640px)
+   ===================================================================== */
+@media (max-width: 640px) {
+  /* Pill ringkasan: lebih kecil & rapi */
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hero-meta .pill { font-size: .8rem !important; padding: 7px 14px !important; }
+
+  /* Kartu rapat */
+  .meeting-card { padding: 16px 14px !important; border-radius: 16px !important; }
+  .meeting-top { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .meeting-title { font-size: 1.02rem !important; line-height: 1.35 !important; }
+  .meeting-time { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .9rem; }
+  .range-chip { margin-left: 0; }
+  .meeting-desc { font-size: .9rem; }
+  .day-label span { font-size: .98rem; line-height: 1.3; }
+
+  /* Tombol link: grid 2 kolom, teks tidak terpotong */
+  .meeting-links {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-top: 12px;
+  }
+  .meeting-links .link-btn-spacer { display: none !important; }
+  .meeting-links .link-btn {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 46px;
+    padding: 9px 10px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    font-size: .84rem !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    word-break: break-word;
+  }
+  .meeting-links .link-btn-icon { width: 20px !important; height: 20px !important; flex-shrink: 0; }
+  /* Kalau jumlah tombol ganjil, tombol terakhir melebar penuh */
+  .meeting-links .link-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+  /* Form admin di HP: 1 kolom */
+  .form-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Layar sangat kecil: tombol 1 kolom */
+@media (max-width: 340px) {
+  .meeting-links { grid-template-columns: 1fr !important; }
+}
