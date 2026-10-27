@@ -123,6 +123,36 @@ function colorFor(label) {
   return CUSTOM_COLORS[h % CUSTOM_COLORS.length];
 }
 
+// Ikon tombol link custom: dipilih otomatis dari kata kunci pada judul.
+// Urutan penting: aturan paling atas yang cocok dipakai. Tambah baris baru di sini kalau perlu.
+const ICON_RULES = [
+  [/dokumentasi|foto|galeri|gambar|album/, "📷"],
+  [/video|rekaman|record|youtube|streaming/, "🎬"],
+  [/undangan|surat|nota dinas|\bsk\b|\btor\b|edaran|\bst\b/, "✉️"],
+  [/notulen|notulensi|risalah|catatan|\bmom\b/, "📝"],
+  [/absen|hadir|presensi|peserta/, "✅"],
+  [/\blk\b|laporan|report|rekap|hasil/, "📑"],
+  [/data|dataset|tabel|rincian|\bdds\b/, "📊"],
+  [/jadwal|agenda|rundown|susunan acara|kalender/, "🗓️"],
+  [/panduan|juknis|petunjuk|manual|pedoman|tutorial|\bsop\b/, "📘"],
+  [/paparan|presentasi|slide|\bppt\b|materi/, "📽️"],
+  [/form|kuesioner|kuisioner|survei|survey|isian|quiz|kuis/, "📋"],
+  [/excel|xls|spreadsheet|sheet/, "📗"],
+  [/\bpdf\b/, "📕"],
+  [/evaluasi|penilaian|nilai|feedback|umpan/, "⭐"],
+  [/grup|group|whatsapp|\bwa\b|telegram|diskusi|chat/, "💬"],
+  [/zoom|meet|meeting|webinar|teams/, "🎥"],
+  [/background|backdrop|latar/, "🖼️"],
+  [/sertifikat|e-?cert/, "🎓"],
+  [/website|web|portal|situs|aplikasi|app\b/, "🌐"],
+  [/folder|drive|arsip|dokumen|berkas|file/, "📁"],
+];
+function iconFor(label) {
+  const s = String(label).toLowerCase();
+  for (const [re, icon] of ICON_RULES) if (re.test(s)) return icon;
+  return "🔗";
+}
+
 function linkButtonsHtml(m) {
   const btns = [];
   if (m.zoomLink)       btns.push(`<a class="link-btn zoom"       href="${m.zoomLink}"       target="_blank" rel="noopener"><img src="assets/img/zoom.png"          alt="" class="link-btn-icon"> Join Zoom</a>`);
@@ -131,7 +161,7 @@ function linkButtonsHtml(m) {
   if (m.materialLink)   btns.push(`<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`);
   if (m.attendanceLink) btns.push(`<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`);
   m.links.forEach((l) => {
-    btns.push(`<a class="link-btn custom" style="background:${colorFor(l.label)}" href="${l.url}" target="_blank" rel="noopener">🔗 ${escapeHtml(l.label)}</a>`);
+    btns.push(`<a class="link-btn custom" style="background:${colorFor(l.label)}" href="${l.url}" target="_blank" rel="noopener">${iconFor(l.label)} ${escapeHtml(l.label)}</a>`);
   });
   if (btns.length === 0) return `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
   const remainder = btns.length % 3;
