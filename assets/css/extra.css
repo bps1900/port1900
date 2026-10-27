@@ -76,10 +76,17 @@
     margin-top: 12px;
   }
   .meeting-links .link-btn-spacer { display: none !important; }
-  .meeting-links .link-btn {
+  .meeting-card .meeting-links a.link-btn {
+    box-sizing: border-box !important;
     width: 100% !important;
-    height: auto !important;
-    min-height: 46px;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: none !important;
+    margin: 0 !important;
+    aspect-ratio: auto !important;
+    justify-self: stretch !important;
+    height: 52px !important;
+    min-height: 52px;
     padding: 9px 10px !important;
     border-radius: 14px !important;
     display: inline-flex !important;
@@ -95,7 +102,8 @@
   }
   .meeting-links .link-btn-icon { width: 20px !important; height: 20px !important; flex-shrink: 0; }
   /* Kalau jumlah tombol ganjil, tombol terakhir melebar penuh */
-  .meeting-links .link-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .meeting-card .meeting-links a.link-btn:nth-child(odd):last-child,
+  .meeting-card .meeting-links a.link-btn:nth-child(odd):has(+ .link-btn-spacer) { grid-column: 1 / -1; }
 
   /* Form admin di HP: 1 kolom */
   .form-grid { grid-template-columns: 1fr !important; }
