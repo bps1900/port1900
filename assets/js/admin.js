@@ -1,5 +1,6 @@
 /**
  * Logic panel admin: login, tampilkan tabel rapat, tambah/ubah/hapus.
+ * Mendukung jadwal rentang (tanggal mulai - tanggal selesai).
  */
 
 const checkingShell = document.getElementById("checkingShell");
@@ -20,7 +21,6 @@ function showToast(msg) {
   toastBackdropEl.classList.remove("hidden");
   toastEl.classList.remove("hidden");
 
-  // Re-trigger animasi ikon centang setiap kali toast baru muncul
   const icon = toastEl.querySelector(".toast-icon");
   icon.style.animation = "none";
   requestAnimationFrame(() => {
@@ -42,37 +42,34 @@ function showToast(msg) {
 let MEETINGS = [];
 
 function escapeHtml(str = "") {
-  return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 /**
- * Google Apps Script mengirim tanggal/jam sebagai objek Date yang otomatis
- * diserialisasi ke ISO string UTC (mis. "2026-09-10T17:00:00.000Z").
- * Karena data sebenarnya dalam zona WIB (UTC+7), kita koreksi +7 jam
- * lalu ambil bagian tanggal / jam yang relevan.
+ * Google Apps Script mengirim tanggal/jam sebagai ISO string UTC.
+ * Data sebenarnya WIB (UTC+7), jadi dikoreksi +7 jam.
  */
 function normalizeDate(value) {
   if (!value) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value; // sudah plain date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const d = new Date(value);
   if (isNaN(d)) return "";
   const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
   return wib.toISOString().slice(0, 10);
 }
 
-// Selalu dikembalikan dalam format 24 jam "HH:mm" (bukan AM/PM).
+// Selalu dikembalikan dalam format 24 jam "HH:mm".
 function normalizeTime(value) {
   if (!value) return "";
-  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5); // sudah plain time 24 jam
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5);
   const d = new Date(value);
   if (isNaN(d)) return "";
   const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-  return wib.toISOString().slice(11, 16); // HH:MM, format 24 jam
+  return wib.toISOString().slice(11, 16);
 }
 
-// Validasi input jam dari form (harus format 24 jam HH:mm, mis. "09:00" / "14:30").
 function isValidTime24(str) {
-  if (!str) return true; // jam boleh kosong
+  if (!str) return true;
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(str.trim());
 }
 
@@ -96,7 +93,6 @@ function withTimeout(promise, ms) {
 }
 
 async function tryAutoLogin() {
-  // Kalau API belum dikonfigurasi, langsung tampilkan form login dengan pesan error
   if (!checkApiConfigured()) {
     checkingShell.classList.add("hidden");
     loginShell.classList.remove("hidden");
@@ -105,16 +101,12 @@ async function tryAutoLogin() {
 
   const token = Api.getToken();
 
-  // Tidak ada token tersimpan -> memang belum login, tampilkan form login
   if (!token) {
     checkingShell.classList.add("hidden");
     loginShell.classList.remove("hidden");
     return;
   }
 
-  // Ada token -> validasi ke server dulu, jangan tampilkan form login dulu.
-  // Dikasih batas waktu 15 detik supaya tidak macet selamanya kalau
-  // Google Apps Script sedang "cold start" / lambat merespons.
   try {
     const res = await withTimeout(Api.listMeetingsAdmin(), 15000);
 
@@ -126,8 +118,6 @@ async function tryAutoLogin() {
       loginShell.classList.remove("hidden");
     }
   } catch (err) {
-    // Timeout atau error jaringan -> jangan hapus token (mungkin cuma lambat),
-    // tapi tampilkan form login supaya user tidak terjebak di layar loading.
     checkingShell.classList.add("hidden");
     loginShell.classList.remove("hidden");
     const errBox = document.getElementById("loginError");
@@ -183,6 +173,40 @@ function showDashboard() {
   loadMeetings();
 }
 
+/* ---------------- META (link lainnya + tanggal selesai) ---------------- */
+
+/**
+ * Kolom "otherLink" di sheet menyimpan salah satu format berikut:
+ *  - [{"label":"..","url":".."}, ...]                     (tanpa rentang)
+ *  - {"links":[...], "endDate":"YYYY-MM-DD"}              (jadwal rentang)
+ *  - URL polos (data paling lama)
+ * Dengan begitu tidak perlu mengubah Apps Script / kolom Google Sheet.
+ */
+function parseMeta(raw) {
+  const meta = { links: [], endDate: "" };
+  if (!raw) return meta;
+  const clean = (arr) =>
+    (Array.isArray(arr) ? arr : [])
+      .filter((x) => x && (x.url || x.label))
+      .map((x) => ({ label: x.label || "", url: x.url || "" }));
+  try {
+    const p = JSON.parse(raw);
+    if (Array.isArray(p)) {
+      meta.links = clean(p);
+      return meta;
+    }
+    if (p && typeof p === "object") {
+      meta.links = clean(p.links);
+      meta.endDate = /^\d{4}-\d{2}-\d{2}$/.test(p.endDate || "") ? p.endDate : "";
+      return meta;
+    }
+  } catch (e) {
+    // bukan JSON -> URL polos
+  }
+  meta.links = [{ label: "Link Lainnya", url: String(raw) }];
+  return meta;
+}
+
 /* ---------------- LIST / TABLE ---------------- */
 
 async function loadMeetings() {
@@ -192,11 +216,17 @@ async function loadMeetings() {
     tableWrap.innerHTML = `<p style="color:#C0392B">Gagal memuat data: ${escapeHtml(res.message || "")}</p>`;
     return;
   }
-  MEETINGS = (res.data || []).map((m) => ({
-    ...m,
-    date: normalizeDate(m.date),
-    time: normalizeTime(m.time),
-  }));
+  MEETINGS = (res.data || []).map((m) => {
+    const meta = parseMeta(m.otherLink);
+    const date = normalizeDate(m.date);
+    return {
+      ...m,
+      date,
+      time: normalizeTime(m.time),
+      otherLinks: meta.links,
+      endDate: meta.endDate && meta.endDate > date ? meta.endDate : "",
+    };
+  });
   renderTable();
 }
 
@@ -218,12 +248,14 @@ function renderTable() {
       m.youtubeLink && "YouTube",
       m.materialLink && "Materi",
       m.attendanceLink && "Daftar Hadir",
-      m.otherLink && "Lainnya",
+      m.otherLinks.length > 0 && "Lainnya",
     ].filter(Boolean).join(", ") || "—";
+
+    const tgl = m.endDate ? `${m.date} → ${m.endDate}` : m.date;
 
     html += `<tr>
       <td>${escapeHtml(m.title)}</td>
-      <td>${escapeHtml(m.date)}</td>
+      <td>${escapeHtml(tgl)}</td>
       <td>${escapeHtml(m.time || "-")}</td>
       <td><span class="status-tag ${m.status}">${m.status === "upcoming" ? "Akan datang" : "Selesai"}</span></td>
       <td>${links}</td>
@@ -243,24 +275,6 @@ function renderTable() {
 const otherLinksList = document.getElementById("otherLinksList");
 let otherLinkRowSeq = 0;
 
-// "otherLink" disimpan di sheet sebagai JSON string: [{"label":"...","url":"..."}, ...]
-// Kalau datanya bukan JSON (data lama, cuma URL polos), dianggap satu link
-// dengan judul default "Link Lainnya" supaya tetap kompatibel.
-function parseOtherLinks(raw) {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .filter((x) => x && (x.url || x.label))
-        .map((x) => ({ label: x.label || "", url: x.url || "" }));
-    }
-  } catch (e) {
-    // bukan JSON -> anggap URL polos (data lama)
-  }
-  return [{ label: "Link Lainnya", url: String(raw) }];
-}
-
 function addOtherLinkRow(label = "", url = "") {
   const rowId = "otherlink-" + (++otherLinkRowSeq);
   const row = document.createElement("div");
@@ -278,7 +292,7 @@ function addOtherLinkRow(label = "", url = "") {
 function resetOtherLinks(links = []) {
   otherLinksList.innerHTML = "";
   if (links.length === 0) {
-    addOtherLinkRow(); // langsung sediakan 1 baris kosong biar gampang isi
+    addOtherLinkRow();
   } else {
     links.forEach((l) => addOtherLinkRow(l.label, l.url));
   }
@@ -286,13 +300,12 @@ function resetOtherLinks(links = []) {
 
 function collectOtherLinks() {
   const rows = [...otherLinksList.querySelectorAll(".other-link-row")];
-  const links = rows
+  return rows
     .map((row) => ({
       label: row.querySelector(".other-link-label").value.trim(),
       url: row.querySelector(".other-link-url").value.trim(),
     }))
-    .filter((l) => l.url); // baris tanpa URL diabaikan
-  return links;
+    .filter((l) => l.url);
 }
 
 document.getElementById("addOtherLinkBtn").addEventListener("click", () => addOtherLinkRow());
@@ -301,9 +314,32 @@ document.getElementById("addOtherLinkBtn").addEventListener("click", () => addOt
 
 const meetingForm = document.getElementById("meetingForm");
 const timeInput = document.getElementById("time");
+const dateInput = document.getElementById("date");
+const isRangeEl = document.getElementById("isRange");
+const endDateEl = document.getElementById("endDate");
+const endDateWrap = document.getElementById("endDateWrap");
+const dateLabel = document.getElementById("dateLabel");
 
-// Rapikan otomatis input jam saat user selesai mengetik (blur),
-// misal "9:5" -> "09:05", biar tetap konsisten format 24 jam.
+// Tampilkan/sembunyikan "Tanggal Selesai" sesuai checkbox rentang
+function syncRange() {
+  const on = isRangeEl.checked;
+  endDateWrap.classList.toggle("hidden", !on);
+  endDateEl.required = on;
+  dateLabel.textContent = on ? "Tanggal Mulai *" : "Tanggal *";
+  if (on) {
+    endDateEl.min = dateInput.value || "";
+    if (!endDateEl.value && dateInput.value) endDateEl.value = dateInput.value;
+  }
+}
+isRangeEl.addEventListener("change", syncRange);
+dateInput.addEventListener("change", () => {
+  if (isRangeEl.checked) {
+    endDateEl.min = dateInput.value || "";
+    if (endDateEl.value && endDateEl.value < dateInput.value) endDateEl.value = dateInput.value;
+  }
+});
+
+// Rapikan input jam saat blur, misal "9:5" -> "09:05"
 timeInput.addEventListener("blur", () => {
   const val = timeInput.value.trim();
   if (!val) return;
@@ -318,6 +354,7 @@ function openAdd() {
   meetingForm.reset();
   document.getElementById("meetingId").value = "";
   resetOtherLinks([]);
+  syncRange();
   formOverlay.classList.remove("hidden");
 }
 
@@ -327,7 +364,7 @@ function openEdit(id) {
   document.getElementById("formTitle").textContent = "Ubah Rapat";
   document.getElementById("meetingId").value = m.id;
   document.getElementById("title").value = m.title || "";
-  document.getElementById("date").value = m.date || "";
+  dateInput.value = m.date || "";
   document.getElementById("time").value = m.time || "";
   document.getElementById("description").value = m.description || "";
   document.getElementById("zoomLink").value = m.zoomLink || "";
@@ -336,7 +373,10 @@ function openEdit(id) {
   document.getElementById("materialLink").value = m.materialLink || "";
   document.getElementById("attendanceLink").value = m.attendanceLink || "";
   document.getElementById("status").value = m.status || "upcoming";
-  resetOtherLinks(parseOtherLinks(m.otherLink));
+  resetOtherLinks(m.otherLinks);
+  isRangeEl.checked = !!m.endDate;
+  endDateEl.value = m.endDate || "";
+  syncRange();
   formOverlay.classList.remove("hidden");
 }
 
@@ -353,10 +393,31 @@ meetingForm.addEventListener("submit", async (e) => {
     return;
   }
 
+  const startDate = dateInput.value;
+  let endDate = "";
+  if (isRangeEl.checked) {
+    endDate = endDateEl.value;
+    if (!endDate) {
+      showToast("Isi tanggal selesai untuk jadwal rentang.");
+      endDateEl.focus();
+      return;
+    }
+    if (endDate < startDate) {
+      showToast("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      endDateEl.focus();
+      return;
+    }
+    if (endDate === startDate) endDate = ""; // sama dengan 1 hari
+  }
+
+  const links = collectOtherLinks();
+  // Tanpa rentang: tetap format lama (array) supaya kompatibel. Dengan rentang: objek.
+  const otherLink = JSON.stringify(endDate ? { links, endDate } : links);
+
   const id = document.getElementById("meetingId").value;
   const data = {
     title: document.getElementById("title").value.trim(),
-    date: document.getElementById("date").value,
+    date: startDate,
     time: timeVal,
     description: document.getElementById("description").value.trim(),
     zoomLink: document.getElementById("zoomLink").value.trim(),
@@ -364,7 +425,7 @@ meetingForm.addEventListener("submit", async (e) => {
     youtubeLink: document.getElementById("youtubeLink").value.trim(),
     materialLink: document.getElementById("materialLink").value.trim(),
     attendanceLink: document.getElementById("attendanceLink").value.trim(),
-    otherLink: JSON.stringify(collectOtherLinks()),
+    otherLink,
     status: document.getElementById("status").value,
   };
 

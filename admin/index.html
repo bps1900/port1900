@@ -4,7 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin — Microsite Rapat</title>
-<link rel="stylesheet" href="../assets/css/style.css" />
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<script>
+  // Auto cache-busting: setiap halaman dibuka, CSS/JS dimuat dengan versi waktu terbaru
+  var BUST = Date.now();
+  ["../assets/css/style.css", "../assets/css/extra.css"].forEach(function (f) {
+    document.write('<link rel="stylesheet" href="' + f + '?t=' + BUST + '">');
+  });
+</script>
 </head>
 <body>
 
@@ -78,7 +85,7 @@
         </div>
 
         <div class="field">
-          <label for="date">Tanggal *</label>
+          <label for="date" id="dateLabel">Tanggal *</label>
           <input id="date" type="date" required />
         </div>
         <div class="field">
@@ -86,6 +93,16 @@
           <input id="time" type="text" inputmode="numeric" placeholder="14:30"
                  pattern="^([01]\d|2[0-3]):[0-5]\d$"
                  title="Format 24 jam, contoh: 09:00 atau 14:30" maxlength="5" />
+        </div>
+
+        <div class="field">
+          <label class="range-toggle" for="isRange">
+            <input type="checkbox" id="isRange" /> Jadwal rentang (lebih dari 1 hari)
+          </label>
+        </div>
+        <div class="field hidden" id="endDateWrap">
+          <label for="endDate">Tanggal Selesai *</label>
+          <input id="endDate" type="date" />
         </div>
 
         <div class="field field-full">
@@ -145,8 +162,10 @@
   <span class="toast-text" id="toastText"></span>
 </div>
 
-<script src="../assets/js/config.js?v=6"></script>
-<script src="../assets/js/api.js?v=6"></script>
-<script src="../assets/js/admin.js?v=6"></script>
+<script>
+  ["../assets/js/config.js", "../assets/js/api.js", "../assets/js/admin.js"].forEach(function (f) {
+    document.write('<script src="' + f + '?t=' + BUST + '"><\/script>');
+  });
+</script>
 </body>
 </html>

@@ -1,0 +1,52 @@
+/* =====================================================================
+   extra.css — tambahan gaya (dimuat SETELAH style.css, jadi aman menimpa)
+   ===================================================================== */
+
+.hidden { display: none !important; }
+
+/* ---- Rapat HARI INI: kuning pastel ---- */
+.pill.today-pill {
+  background: #FFF1B8;
+  color: #7A5B00;
+  border: 1px solid #F2D96B;
+}
+.meeting-card.today {
+  background: #FFF8D6;
+  border-left-color: #F2C94C;
+}
+.day-group.is-today .day-dot {
+  background: #F2C94C !important;
+  border-color: #F2C94C !important;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px #F2C94C !important;
+}
+
+/* ---- Chip rentang hari ---- */
+.range-chip {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #E8EEF9;
+  color: #1F3A6E;
+  font-size: .75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.meeting-card.today .range-chip {
+  background: #FFE9A0;
+  color: #6B4E00;
+}
+
+/* ---- Tombol link custom (warna beda-beda otomatis) ---- */
+.link-btn.custom { color: #fff; }
+.link-btn.custom:hover { filter: brightness(1.08); }
+
+/* ---- Form admin: toggle rentang ---- */
+.range-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.range-toggle input { width: 18px; height: 18px; margin: 0; }
