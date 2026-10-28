@@ -81,7 +81,7 @@ function parseOtherLinks(raw) {
 function linkBtn({ cls, url, iconHtml, label }) {
   if (Lock.isLocked(url)) {
     const idx = LOCKED_LINKS.push({ enc: url, label }) - 1;
-    return `<button type="button" class="link-btn ${cls}" data-lock="${idx}">${iconHtml}🔒 ${escapeHtml(label)}</button>`;
+    return `<button type="button" class="link-btn ${cls}" data-lock="${idx}">${iconHtml}${escapeHtml(label)}</button>`;
   }
   return `<a class="link-btn ${cls}" href="${escapeHtml(url)}" target="_blank" rel="noopener">${iconHtml}${escapeHtml(label)}</a>`;
 }
