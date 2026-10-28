@@ -46,6 +46,9 @@ const Api = (() => {
 
     // ---- Publik ----
     listMeetings: () => callGet("listMeetings"),
+    version: () => callGet("version"),
+    // Minta URL asli dari link yang dikunci. Password dicek di server (Apps Script).
+    unlockLink: (meetingId, index, password) => callPost("unlockLink", { meetingId, index, password }),
 
     // ---- Auth ----
     login: (username, password) => callPost("login", { username, password }),

@@ -94,8 +94,8 @@ function parseMeta(raw) {
   if (!raw) return meta;
   const clean = (arr) =>
     (Array.isArray(arr) ? arr : [])
-      .filter((x) => x && x.url)
-      .map((x) => ({ label: x.label || "Link Lainnya", url: x.url }));
+      .map((x, i) => (x ? { label: x.label || "Link Lainnya", url: x.url || "", locked: !!x.locked, idx: i } : null))
+      .filter((x) => x && (x.url || x.locked));
   try {
     const p = JSON.parse(raw);
     if (Array.isArray(p)) {
@@ -161,7 +161,12 @@ function linkButtonsHtml(m) {
   if (m.materialLink)   btns.push(`<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`);
   if (m.attendanceLink) btns.push(`<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`);
   m.links.forEach((l) => {
-    btns.push(`<a class="link-btn custom" style="background:${colorFor(l.label)}" href="${l.url}" target="_blank" rel="noopener">${iconFor(l.label)} ${escapeHtml(l.label)}</a>`);
+    const color = colorFor(l.label);
+    if (l.locked) {
+      btns.push(`<a class="link-btn custom locked" style="background:${color}" href="#" role="button" data-mid="${escapeHtml(m.id)}" data-idx="${l.idx}" data-label="${escapeHtml(l.label)}">${iconFor(l.label)} ${escapeHtml(l.label)} <span class="lock-badge">🔒</span></a>`);
+    } else {
+      btns.push(`<a class="link-btn custom" style="background:${color}" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${iconFor(l.label)} ${escapeHtml(l.label)}</a>`);
+    }
   });
   if (btns.length === 0) return `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
   const remainder = btns.length % 3;
@@ -429,6 +434,71 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = originalLabel;
+  }
+});
+
+/* ---------- Buka link terkunci (password dicek di server) ---------- */
+const unlockOverlay = document.getElementById("unlockOverlay");
+const unlockError = document.getElementById("unlockError");
+const unlockForm = document.getElementById("unlockForm");
+let pending = null;
+
+function closeUnlock() {
+  unlockOverlay.classList.add("hidden");
+  pending = null;
+}
+
+document.getElementById("timeline").addEventListener("click", (e) => {
+  const a = e.target.closest("a[data-mid]");
+  if (!a) return;
+  e.preventDefault();
+  pending = { mid: a.dataset.mid, idx: Number(a.dataset.idx) };
+  document.getElementById("unlockTitle").textContent = `Masukkan password untuk membuka "${a.dataset.label || "link"}".`;
+  unlockError.classList.add("hidden");
+  unlockForm.reset();
+  unlockOverlay.classList.remove("hidden");
+  document.getElementById("unlockPassword").focus();
+});
+
+document.getElementById("closeUnlockBtn").addEventListener("click", closeUnlock);
+unlockOverlay.addEventListener("click", (e) => {
+  if (e.target === unlockOverlay) closeUnlock();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !unlockOverlay.classList.contains("hidden")) closeUnlock();
+});
+
+unlockForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!pending) return;
+  const pw = document.getElementById("unlockPassword").value;
+  const btn = unlockForm.querySelector("button[type=submit]");
+  unlockError.classList.add("hidden");
+  // Buka tab dulu (selagi masih dalam klik pengguna) supaya tidak diblokir popup blocker.
+  const w = window.open("", "_blank");
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = "Memeriksa...";
+  try {
+    const res = await Api.unlockLink(pending.mid, pending.idx, pw);
+    if (!res.success || !/^https?:\/\//i.test(res.url || "")) {
+      throw new Error(res.message || "Password salah.");
+    }
+    if (w) {
+      w.opener = null;
+      w.location.href = res.url;
+    } else {
+      window.location.href = res.url;
+    }
+    closeUnlock();
+  } catch (err) {
+    if (w) w.close();
+    unlockError.textContent = err.message === "Failed to fetch" ? "Gagal terhubung ke server. Coba lagi." : err.message;
+    unlockError.classList.remove("hidden");
+    document.getElementById("unlockPassword").select();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
   }
 });
 

@@ -14,7 +14,7 @@ const toastBackdropEl = document.getElementById("toastBackdrop");
 
 let toastHideTimer = null;
 
-function showToast(msg) {
+function showToast(msg, ms = 1300) {
   clearTimeout(toastHideTimer);
 
   toastTextEl.textContent = msg;
@@ -36,7 +36,7 @@ function showToast(msg) {
       toastBackdropEl.classList.add("hidden");
       toastEl.classList.add("hidden");
     }, 250);
-  }, 1300);
+  }, ms);
 }
 
 let MEETINGS = [];
@@ -188,7 +188,7 @@ function parseMeta(raw) {
   const clean = (arr) =>
     (Array.isArray(arr) ? arr : [])
       .filter((x) => x && (x.url || x.label))
-      .map((x) => ({ label: x.label || "", url: x.url || "" }));
+      .map((x) => ({ label: x.label || "", url: x.url || "", pass: x.pass || "" }));
   try {
     const p = JSON.parse(raw);
     if (Array.isArray(p)) {
@@ -248,7 +248,7 @@ function renderTable() {
       m.youtubeLink && "YouTube",
       m.materialLink && "Materi",
       m.attendanceLink && "Daftar Hadir",
-      m.otherLinks.length > 0 && "Lainnya",
+      m.otherLinks.length > 0 && "Lainnya" + (m.otherLinks.some((l) => l.pass) ? " 🔒" : ""),
     ].filter(Boolean).join(", ") || "—";
 
     const tgl = m.endDate ? `${m.date} → ${m.endDate}` : m.date;
@@ -270,23 +270,37 @@ function renderTable() {
   tableWrap.innerHTML = html;
 }
 
-/* ---------------- LINK LAINNYA (dinamis) ---------------- */
+/* ---------------- LINK LAINNYA (dinamis, bisa dikunci password) ---------------- */
 
 const otherLinksList = document.getElementById("otherLinksList");
-let otherLinkRowSeq = 0;
 
-function addOtherLinkRow(label = "", url = "") {
-  const rowId = "otherlink-" + (++otherLinkRowSeq);
-  const row = document.createElement("div");
-  row.className = "other-link-row";
-  row.dataset.rowId = rowId;
-  row.innerHTML = `
-    <input type="text" class="other-link-label" placeholder="Judul (misal: Surat Undangan)" value="${escapeHtml(label)}" />
-    <input type="url" class="other-link-url" placeholder="https://..." value="${escapeHtml(url)}" />
-    <button type="button" class="other-link-remove" aria-label="Hapus link">&times;</button>
+function syncLock(item) {
+  const on = item.querySelector(".lock-check").checked;
+  item.querySelector(".lock-pass").classList.toggle("hidden", !on);
+  const note = item.querySelector(".lock-note");
+  note.classList.toggle("hidden", !on);
+  note.textContent = "Pengunjung harus memasukkan password ini untuk membuka link. Password tersimpan di database dan bisa dilihat/diubah di sini.";
+}
+
+function addOtherLinkRow(label = "", url = "", pass = "") {
+  const item = document.createElement("div");
+  item.className = "other-link-item";
+  item.innerHTML = `
+    <div class="other-link-row">
+      <input type="text" class="other-link-label" placeholder="Judul (misal: Surat Undangan)" value="${escapeHtml(label)}" />
+      <input type="url" class="other-link-url" placeholder="https://..." value="${escapeHtml(url)}" />
+      <button type="button" class="other-link-remove" aria-label="Hapus link">&times;</button>
+    </div>
+    <div class="other-link-lock">
+      <label class="lock-toggle"><input type="checkbox" class="lock-check" ${pass ? "checked" : ""} /> 🔒 Kunci dengan password</label>
+      <input type="text" class="lock-pass hidden" placeholder="Password link ini" autocomplete="off" value="${escapeHtml(pass)}" />
+    </div>
+    <p class="lock-note hidden"></p>
   `;
-  row.querySelector(".other-link-remove").addEventListener("click", () => row.remove());
-  otherLinksList.appendChild(row);
+  item.querySelector(".other-link-remove").addEventListener("click", () => item.remove());
+  item.querySelector(".lock-check").addEventListener("change", () => syncLock(item));
+  otherLinksList.appendChild(item);
+  syncLock(item);
 }
 
 function resetOtherLinks(links = []) {
@@ -294,18 +308,29 @@ function resetOtherLinks(links = []) {
   if (links.length === 0) {
     addOtherLinkRow();
   } else {
-    links.forEach((l) => addOtherLinkRow(l.label, l.url));
+    links.forEach((l) => addOtherLinkRow(l.label, l.url, l.pass));
   }
 }
 
+// Mengumpulkan link tambahan. Link yang dikunci membawa field "pass" (disimpan di database).
 function collectOtherLinks() {
-  const rows = [...otherLinksList.querySelectorAll(".other-link-row")];
-  return rows
-    .map((row) => ({
-      label: row.querySelector(".other-link-label").value.trim(),
-      url: row.querySelector(".other-link-url").value.trim(),
-    }))
-    .filter((l) => l.url);
+  const out = [];
+  for (const item of otherLinksList.querySelectorAll(".other-link-item")) {
+    const label = item.querySelector(".other-link-label").value.trim();
+    const url = item.querySelector(".other-link-url").value.trim();
+    const locked = item.querySelector(".lock-check").checked;
+    const pass = item.querySelector(".lock-pass").value.trim();
+    if (!url) continue;
+    if (!locked) {
+      out.push({ label, url });
+      continue;
+    }
+    const name = label || "tanpa judul";
+    if (!/^https?:\/\//i.test(url)) throw new Error(`Link "${name}": URL harus diawali http:// atau https://`);
+    if (!pass) throw new Error(`Link "${name}": isi password untuk mengunci.`);
+    out.push({ label, url, pass });
+  }
+  return out;
 }
 
 document.getElementById("addOtherLinkBtn").addEventListener("click", () => addOtherLinkRow());
@@ -410,7 +435,20 @@ meetingForm.addEventListener("submit", async (e) => {
     if (endDate === startDate) endDate = ""; // sama dengan 1 hari
   }
 
-  const links = collectOtherLinks();
+  let links;
+  try {
+    links = collectOtherLinks();
+    // Pengaman: kalau Apps Script belum diperbarui, link berpassword akan tersimpan TERBUKA.
+    if (links.some((l) => l.pass)) {
+      const v = await Api.version().catch(() => null);
+      if (!v || !(v.version >= 2)) {
+        throw new Error("Apps Script belum diperbarui (Code.gs versi baru belum di-deploy), jadi link berpassword tidak disimpan.");
+      }
+    }
+  } catch (err) {
+    showToast(err.message, 4500);
+    return;
+  }
   // Tanpa rentang: tetap format lama (array) supaya kompatibel. Dengan rentang: objek.
   const otherLink = JSON.stringify(endDate ? { links, endDate } : links);
 
