@@ -121,4 +121,3 @@
 .lock-toggle input { width: 16px; height: 16px; margin: 0; }
 .lock-pass { flex: 1 1 200px; min-width: 0; padding: 8px 12px; border: 1px solid #D5DEEA; border-radius: 10px; font: inherit; font-size: .88rem; }
 .lock-note { margin: 4px 2px 0; font-size: .78rem; color: #5B6B82; }
-.lock-badge { font-size: .85em; }

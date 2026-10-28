@@ -114,14 +114,10 @@ function parseMeta(raw) {
   return meta;
 }
 
-// Warna tombol link custom: dipilih otomatis dari judulnya (selalu sama untuk judul yang sama)
-const CUSTOM_COLORS = ["#6D28D9", "#0369A1", "#BE185D", "#B45309", "#0F766E", "#4D7C0F", "#9F1239", "#4338CA", "#C2410C", "#0E7490"];
-function colorFor(label) {
-  let h = 0;
-  const s = String(label).toLowerCase();
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return CUSTOM_COLORS[h % CUSTOM_COLORS.length];
-}
+// Warna tombol link custom: dibagi BERURUTAN per kartu (tombol 1 dapat warna 1, tombol 2 warna 2, dst),
+// sehingga tidak ada dua tombol dalam satu kartu yang warnanya sama. Palet dipilih agar saling berjauhan
+// dan berbeda dari warna tombol bawaan (Zoom, Virtual Background, YouTube, Materi, Daftar Hadir).
+const CUSTOM_COLORS = ["#aa1879", "#863913", "#137386", "#867313", "#4d1386", "#1861aa", "#398613", "#861339", "#57534E", "#aa18aa"];
 
 // Ikon tombol link custom: dipilih otomatis dari kata kunci pada judul.
 // Urutan penting: aturan paling atas yang cocok dipakai. Tambah baris baru di sini kalau perlu.
@@ -160,10 +156,10 @@ function linkButtonsHtml(m) {
   if (m.youtubeLink)    btns.push(`<a class="link-btn youtube"    href="${m.youtubeLink}"    target="_blank" rel="noopener"><img src="assets/img/youtube.png"        alt="" class="link-btn-icon"> YouTube</a>`);
   if (m.materialLink)   btns.push(`<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`);
   if (m.attendanceLink) btns.push(`<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`);
-  m.links.forEach((l) => {
-    const color = colorFor(l.label);
+  m.links.forEach((l, i) => {
+    const color = CUSTOM_COLORS[i % CUSTOM_COLORS.length];
     if (l.locked) {
-      btns.push(`<a class="link-btn custom locked" style="background:${color}" href="#" role="button" data-mid="${escapeHtml(m.id)}" data-idx="${l.idx}" data-label="${escapeHtml(l.label)}">${iconFor(l.label)} ${escapeHtml(l.label)} <span class="lock-badge">🔒</span></a>`);
+      btns.push(`<a class="link-btn custom locked" style="background:${color}" href="#" role="button" data-mid="${escapeHtml(m.id)}" data-idx="${l.idx}" data-label="${escapeHtml(l.label)}">${iconFor(l.label)} ${escapeHtml(l.label)}</a>`);
     } else {
       btns.push(`<a class="link-btn custom" style="background:${color}" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${iconFor(l.label)} ${escapeHtml(l.label)}</a>`);
     }
