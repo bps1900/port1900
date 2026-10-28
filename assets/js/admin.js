@@ -1,7 +1,6 @@
 /**
  * Logic panel admin: login, tampilkan tabel rapat, tambah/ubah/hapus.
- * Setiap link bisa diberi password (opsional). Link yang diberi password
- * dienkripsi di browser (lihat crypto.js) sebelum dikirim ke Google Sheet.
+ * Mendukung jadwal rentang (tanggal mulai - tanggal selesai).
  */
 
 const checkingShell = document.getElementById("checkingShell");
@@ -46,6 +45,10 @@ function escapeHtml(str = "") {
   return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/**
+ * Google Apps Script mengirim tanggal/jam sebagai ISO string UTC.
+ * Data sebenarnya WIB (UTC+7), jadi dikoreksi +7 jam.
+ */
 function normalizeDate(value) {
   if (!value) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -55,6 +58,7 @@ function normalizeDate(value) {
   return wib.toISOString().slice(0, 10);
 }
 
+// Selalu dikembalikan dalam format 24 jam "HH:mm".
 function normalizeTime(value) {
   if (!value) return "";
   if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5);
@@ -169,6 +173,40 @@ function showDashboard() {
   loadMeetings();
 }
 
+/* ---------------- META (link lainnya + tanggal selesai) ---------------- */
+
+/**
+ * Kolom "otherLink" di sheet menyimpan salah satu format berikut:
+ *  - [{"label":"..","url":".."}, ...]                     (tanpa rentang)
+ *  - {"links":[...], "endDate":"YYYY-MM-DD"}              (jadwal rentang)
+ *  - URL polos (data paling lama)
+ * Dengan begitu tidak perlu mengubah Apps Script / kolom Google Sheet.
+ */
+function parseMeta(raw) {
+  const meta = { links: [], endDate: "" };
+  if (!raw) return meta;
+  const clean = (arr) =>
+    (Array.isArray(arr) ? arr : [])
+      .filter((x) => x && (x.url || x.label))
+      .map((x) => ({ label: x.label || "", url: x.url || "" }));
+  try {
+    const p = JSON.parse(raw);
+    if (Array.isArray(p)) {
+      meta.links = clean(p);
+      return meta;
+    }
+    if (p && typeof p === "object") {
+      meta.links = clean(p.links);
+      meta.endDate = /^\d{4}-\d{2}-\d{2}$/.test(p.endDate || "") ? p.endDate : "";
+      return meta;
+    }
+  } catch (e) {
+    // bukan JSON -> URL polos
+  }
+  meta.links = [{ label: "Link Lainnya", url: String(raw) }];
+  return meta;
+}
+
 /* ---------------- LIST / TABLE ---------------- */
 
 async function loadMeetings() {
@@ -178,11 +216,17 @@ async function loadMeetings() {
     tableWrap.innerHTML = `<p style="color:#C0392B">Gagal memuat data: ${escapeHtml(res.message || "")}</p>`;
     return;
   }
-  MEETINGS = (res.data || []).map((m) => ({
-    ...m,
-    date: normalizeDate(m.date),
-    time: normalizeTime(m.time),
-  }));
+  MEETINGS = (res.data || []).map((m) => {
+    const meta = parseMeta(m.otherLink);
+    const date = normalizeDate(m.date);
+    return {
+      ...m,
+      date,
+      time: normalizeTime(m.time),
+      otherLinks: meta.links,
+      endDate: meta.endDate && meta.endDate > date ? meta.endDate : "",
+    };
+  });
   renderTable();
 }
 
@@ -193,26 +237,25 @@ function renderTable() {
   }
   const sorted = [...MEETINGS].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
 
-  const tag = (label, value) => value && label + (Lock.isLocked(value) ? " 🔒" : "");
-
   let html = `<table class="admin-table"><thead><tr>
     <th>Judul</th><th>Tanggal</th><th>Jam</th><th>Status</th><th>Link</th><th></th>
   </tr></thead><tbody>`;
 
   sorted.forEach((m) => {
-    const others = parseOtherLinks(m.otherLink).length;
     const links = [
-      tag("Zoom", m.zoomLink),
-      tag("Virtual BG", m.virtualBgLink),
-      tag("YouTube", m.youtubeLink),
-      tag("Materi", m.materialLink),
-      tag("Daftar Hadir", m.attendanceLink),
-      others > 0 && `Lainnya (${others})`,
+      m.zoomLink && "Zoom",
+      m.virtualBgLink && "Virtual BG",
+      m.youtubeLink && "YouTube",
+      m.materialLink && "Materi",
+      m.attendanceLink && "Daftar Hadir",
+      m.otherLinks.length > 0 && "Lainnya",
     ].filter(Boolean).join(", ") || "—";
+
+    const tgl = m.endDate ? `${m.date} → ${m.endDate}` : m.date;
 
     html += `<tr>
       <td>${escapeHtml(m.title)}</td>
-      <td>${escapeHtml(m.date)}</td>
+      <td>${escapeHtml(tgl)}</td>
       <td>${escapeHtml(m.time || "-")}</td>
       <td><span class="status-tag ${m.status}">${m.status === "upcoming" ? "Akan datang" : "Selesai"}</span></td>
       <td>${links}</td>
@@ -227,109 +270,21 @@ function renderTable() {
   tableWrap.innerHTML = html;
 }
 
-/* ---------------- KUNCI LINK (password opsional) ---------------- */
-
-const LOCKED_TEXT = "🔒 Link terkunci (klik untuk mengganti)";
-
-/**
- * Pasangkan sebuah input URL dengan input password.
- * - Password kosong  -> link disimpan polos (tanpa password).
- * - Password terisi  -> link dienkripsi sebelum disimpan.
- * - Link lama yang sudah terkunci ditampilkan "🔒 terkunci"; kalau tidak
- *   diubah, nilai terenkripsinya disimpan apa adanya (password tetap sama).
- *   Klik kolomnya untuk mengganti link / password.
- */
-function bindLockable(urlInput, pwInput) {
-  urlInput.addEventListener("click", () => {
-    if (!urlInput.dataset.enc) return;
-    delete urlInput.dataset.enc;
-    urlInput.readOnly = false;
-    urlInput.type = "url";
-    urlInput.value = "";
-    urlInput.classList.remove("is-locked");
-    pwInput.placeholder = "🔒 Password baru (kosongkan = tanpa password)";
-    urlInput.focus();
-  });
-}
-
-function setLockableValue(urlInput, pwInput, value) {
-  pwInput.value = "";
-  delete urlInput.dataset.enc;
-  urlInput.readOnly = false;
-  urlInput.type = "url";
-  urlInput.classList.remove("is-locked");
-  pwInput.placeholder = "🔒 Password (kosongkan = tanpa password)";
-  if (Lock.isLocked(value)) {
-    urlInput.dataset.enc = value;
-    urlInput.type = "text";
-    urlInput.readOnly = true;
-    urlInput.value = LOCKED_TEXT;
-    urlInput.classList.add("is-locked");
-    pwInput.placeholder = "Terkunci — klik kolom link di atas untuk mengganti";
-  } else {
-    urlInput.value = value || "";
-  }
-}
-
-async function readLockable(urlInput, pwInput) {
-  if (urlInput.dataset.enc) return urlInput.dataset.enc; // tidak diubah
-  const url = urlInput.value.trim();
-  const pw = pwInput.value;
-  if (!url) return "";
-  return pw ? Lock.encrypt(url, pw) : url;
-}
-
-// Field link tetap (Zoom, VB, YouTube, Materi, Daftar Hadir)
-const FIXED_LINK_IDS = ["zoomLink", "virtualBgLink", "youtubeLink", "materialLink", "attendanceLink"];
-const fixedPw = {};
-
-FIXED_LINK_IDS.forEach((id) => {
-  const urlInput = document.getElementById(id);
-  const pw = document.createElement("input");
-  pw.type = "password";
-  pw.autocomplete = "new-password";
-  pw.className = "lock-pw";
-  pw.style.marginTop = "6px";
-  pw.placeholder = "🔒 Password (kosongkan = tanpa password)";
-  urlInput.insertAdjacentElement("afterend", pw);
-  fixedPw[id] = pw;
-  bindLockable(urlInput, pw);
-});
-
 /* ---------------- LINK LAINNYA (dinamis) ---------------- */
 
 const otherLinksList = document.getElementById("otherLinksList");
-
-// "otherLink" disimpan di sheet sebagai JSON string: [{"label":"...","url":"..."}, ...]
-// "url" boleh berisi teks terenkripsi ("enc1:...") kalau diberi password.
-function parseOtherLinks(raw) {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .filter((x) => x && (x.url || x.label))
-        .map((x) => ({ label: x.label || "", url: x.url || "" }));
-    }
-  } catch (e) {
-    // bukan JSON -> URL polos (data lama)
-  }
-  return [{ label: "Link Lainnya", url: String(raw) }];
-}
+let otherLinkRowSeq = 0;
 
 function addOtherLinkRow(label = "", url = "") {
+  const rowId = "otherlink-" + (++otherLinkRowSeq);
   const row = document.createElement("div");
   row.className = "other-link-row";
+  row.dataset.rowId = rowId;
   row.innerHTML = `
     <input type="text" class="other-link-label" placeholder="Judul (misal: Surat Undangan)" value="${escapeHtml(label)}" />
-    <input type="url" class="other-link-url" placeholder="https://..." />
-    <input type="password" class="other-link-pw" autocomplete="new-password" placeholder="🔒 Password (opsional)" />
+    <input type="url" class="other-link-url" placeholder="https://..." value="${escapeHtml(url)}" />
     <button type="button" class="other-link-remove" aria-label="Hapus link">&times;</button>
   `;
-  const urlInput = row.querySelector(".other-link-url");
-  const pwInput = row.querySelector(".other-link-pw");
-  bindLockable(urlInput, pwInput);
-  setLockableValue(urlInput, pwInput, url);
   row.querySelector(".other-link-remove").addEventListener("click", () => row.remove());
   otherLinksList.appendChild(row);
 }
@@ -343,15 +298,14 @@ function resetOtherLinks(links = []) {
   }
 }
 
-async function collectOtherLinks() {
+function collectOtherLinks() {
   const rows = [...otherLinksList.querySelectorAll(".other-link-row")];
-  const out = [];
-  for (const row of rows) {
-    const label = row.querySelector(".other-link-label").value.trim();
-    const url = await readLockable(row.querySelector(".other-link-url"), row.querySelector(".other-link-pw"));
-    if (url) out.push({ label, url });
-  }
-  return out;
+  return rows
+    .map((row) => ({
+      label: row.querySelector(".other-link-label").value.trim(),
+      url: row.querySelector(".other-link-url").value.trim(),
+    }))
+    .filter((l) => l.url);
 }
 
 document.getElementById("addOtherLinkBtn").addEventListener("click", () => addOtherLinkRow());
@@ -360,7 +314,32 @@ document.getElementById("addOtherLinkBtn").addEventListener("click", () => addOt
 
 const meetingForm = document.getElementById("meetingForm");
 const timeInput = document.getElementById("time");
+const dateInput = document.getElementById("date");
+const isRangeEl = document.getElementById("isRange");
+const endDateEl = document.getElementById("endDate");
+const endDateWrap = document.getElementById("endDateWrap");
+const dateLabel = document.getElementById("dateLabel");
 
+// Tampilkan/sembunyikan "Tanggal Selesai" sesuai checkbox rentang
+function syncRange() {
+  const on = isRangeEl.checked;
+  endDateWrap.classList.toggle("hidden", !on);
+  endDateEl.required = on;
+  dateLabel.textContent = on ? "Tanggal Mulai *" : "Tanggal *";
+  if (on) {
+    endDateEl.min = dateInput.value || "";
+    if (!endDateEl.value && dateInput.value) endDateEl.value = dateInput.value;
+  }
+}
+isRangeEl.addEventListener("change", syncRange);
+dateInput.addEventListener("change", () => {
+  if (isRangeEl.checked) {
+    endDateEl.min = dateInput.value || "";
+    if (endDateEl.value && endDateEl.value < dateInput.value) endDateEl.value = dateInput.value;
+  }
+});
+
+// Rapikan input jam saat blur, misal "9:5" -> "09:05"
 timeInput.addEventListener("blur", () => {
   const val = timeInput.value.trim();
   if (!val) return;
@@ -374,8 +353,8 @@ function openAdd() {
   document.getElementById("formTitle").textContent = "Tambah Rapat";
   meetingForm.reset();
   document.getElementById("meetingId").value = "";
-  FIXED_LINK_IDS.forEach((id) => setLockableValue(document.getElementById(id), fixedPw[id], ""));
   resetOtherLinks([]);
+  syncRange();
   formOverlay.classList.remove("hidden");
 }
 
@@ -385,12 +364,19 @@ function openEdit(id) {
   document.getElementById("formTitle").textContent = "Ubah Rapat";
   document.getElementById("meetingId").value = m.id;
   document.getElementById("title").value = m.title || "";
-  document.getElementById("date").value = m.date || "";
+  dateInput.value = m.date || "";
   document.getElementById("time").value = m.time || "";
   document.getElementById("description").value = m.description || "";
-  FIXED_LINK_IDS.forEach((fid) => setLockableValue(document.getElementById(fid), fixedPw[fid], m[fid] || ""));
+  document.getElementById("zoomLink").value = m.zoomLink || "";
+  document.getElementById("virtualBgLink").value = m.virtualBgLink || "";
+  document.getElementById("youtubeLink").value = m.youtubeLink || "";
+  document.getElementById("materialLink").value = m.materialLink || "";
+  document.getElementById("attendanceLink").value = m.attendanceLink || "";
   document.getElementById("status").value = m.status || "upcoming";
-  resetOtherLinks(parseOtherLinks(m.otherLink));
+  resetOtherLinks(m.otherLinks);
+  isRangeEl.checked = !!m.endDate;
+  endDateEl.value = m.endDate || "";
+  syncRange();
   formOverlay.classList.remove("hidden");
 }
 
@@ -407,16 +393,41 @@ meetingForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!window.crypto || !window.crypto.subtle) {
-    // crypto.subtle hanya ada di HTTPS / localhost
-    const anyPw = [...document.querySelectorAll(".lock-pw, .other-link-pw")].some((i) => i.value);
-    if (anyPw) {
-      showToast("Fitur password butuh koneksi HTTPS.");
+  const startDate = dateInput.value;
+  let endDate = "";
+  if (isRangeEl.checked) {
+    endDate = endDateEl.value;
+    if (!endDate) {
+      showToast("Isi tanggal selesai untuk jadwal rentang.");
+      endDateEl.focus();
       return;
     }
+    if (endDate < startDate) {
+      showToast("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      endDateEl.focus();
+      return;
+    }
+    if (endDate === startDate) endDate = ""; // sama dengan 1 hari
   }
 
+  const links = collectOtherLinks();
+  // Tanpa rentang: tetap format lama (array) supaya kompatibel. Dengan rentang: objek.
+  const otherLink = JSON.stringify(endDate ? { links, endDate } : links);
+
   const id = document.getElementById("meetingId").value;
+  const data = {
+    title: document.getElementById("title").value.trim(),
+    date: startDate,
+    time: timeVal,
+    description: document.getElementById("description").value.trim(),
+    zoomLink: document.getElementById("zoomLink").value.trim(),
+    virtualBgLink: document.getElementById("virtualBgLink").value.trim(),
+    youtubeLink: document.getElementById("youtubeLink").value.trim(),
+    materialLink: document.getElementById("materialLink").value.trim(),
+    attendanceLink: document.getElementById("attendanceLink").value.trim(),
+    otherLink,
+    status: document.getElementById("status").value,
+  };
 
   const submitBtn = e.target.querySelector("button[type=submit]");
   const originalLabel = submitBtn.textContent;
@@ -427,18 +438,6 @@ meetingForm.addEventListener("submit", async (e) => {
   submitBtn.innerHTML = `<span class="spinner sm" style="border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>Menyimpan...`;
 
   try {
-    const data = {
-      title: document.getElementById("title").value.trim(),
-      date: document.getElementById("date").value,
-      time: timeVal,
-      description: document.getElementById("description").value.trim(),
-      status: document.getElementById("status").value,
-    };
-    for (const fid of FIXED_LINK_IDS) {
-      data[fid] = await readLockable(document.getElementById(fid), fixedPw[fid]);
-    }
-    data.otherLink = JSON.stringify(await collectOtherLinks());
-
     const res = id ? await Api.updateMeeting(id, data) : await Api.createMeeting(data);
     if (res.success) {
       formOverlay.classList.add("hidden");
