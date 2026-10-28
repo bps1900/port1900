@@ -4,14 +4,22 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin — Microsite Rapat</title>
-<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
-<script>
-  // Auto cache-busting: setiap halaman dibuka, CSS/JS dimuat dengan versi waktu terbaru
-  var BUST = Date.now();
-  ["../assets/css/style.css", "../assets/css/extra.css"].forEach(function (f) {
-    document.write('<link rel="stylesheet" href="' + f + '?t=' + BUST + '">');
-  });
-</script>
+<link rel="stylesheet" href="../assets/css/style.css" />
+<style>
+  .lock-box { margin-top: 6px; }
+  .lock-pw { width: 100%; font-size: .85rem; }
+  .lock-info { font-size: .8rem; margin-top: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .lock-info.hidden { display: none; }
+  .lock-clear { border: none; background: none; color: #C0392B; cursor: pointer; font: inherit; text-decoration: underline; padding: 0; }
+  #otherLinksList .other-link-row { display: grid; grid-template-columns: 1fr 1.4fr .9fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  #otherLinksList .other-link-row input { width: 100%; min-width: 0; }
+  @media (max-width: 700px) {
+    #otherLinksList .other-link-row { grid-template-columns: 1fr auto; }
+    #otherLinksList .other-link-row .other-link-label,
+    #otherLinksList .other-link-row .other-link-url,
+    #otherLinksList .other-link-row .other-link-pw { grid-column: 1 / 2; }
+  }
+</style>
 </head>
 <body>
 
@@ -85,7 +93,7 @@
         </div>
 
         <div class="field">
-          <label for="date" id="dateLabel">Tanggal *</label>
+          <label for="date">Tanggal *</label>
           <input id="date" type="date" required />
         </div>
         <div class="field">
@@ -93,16 +101,6 @@
           <input id="time" type="text" inputmode="numeric" placeholder="14:30"
                  pattern="^([01]\d|2[0-3]):[0-5]\d$"
                  title="Format 24 jam, contoh: 09:00 atau 14:30" maxlength="5" />
-        </div>
-
-        <div class="field">
-          <label class="range-toggle" for="isRange">
-            <input type="checkbox" id="isRange" /> Jadwal rentang (lebih dari 1 hari)
-          </label>
-        </div>
-        <div class="field hidden" id="endDateWrap">
-          <label for="endDate">Tanggal Selesai *</label>
-          <input id="endDate" type="date" />
         </div>
 
         <div class="field field-full">
@@ -162,10 +160,9 @@
   <span class="toast-text" id="toastText"></span>
 </div>
 
-<script>
-  ["../assets/js/config.js", "../assets/js/api.js", "../assets/js/admin.js"].forEach(function (f) {
-    document.write('<script src="' + f + '?t=' + BUST + '"><\/script>');
-  });
-</script>
+<script src="../assets/js/config.js?v=8"></script>
+<script src="../assets/js/crypto.js?v=8"></script>
+<script src="../assets/js/api.js?v=8"></script>
+<script src="../assets/js/admin.js?v=8"></script>
 </body>
 </html>

@@ -4,14 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Microsite BPS1900</title>
-<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
-<script>
-  // Auto cache-busting: setiap halaman dibuka, CSS/JS dimuat dengan versi waktu terbaru
-  var BUST = Date.now();
-  ["assets/css/style.css", "assets/css/extra.css"].forEach(function (f) {
-    document.write('<link rel="stylesheet" href="' + f + '?t=' + BUST + '">');
-  });
-</script>
+<link rel="stylesheet" href="assets/css/style.css?v=7" />
+<style>
+  button.link-btn { border: none; font: inherit; cursor: pointer; }
+  .unlock-label { margin: 0 0 12px; font-size: .9rem; color: var(--text-muted, #667); }
+</style>
 </head>
 <body>
 
@@ -45,21 +42,36 @@
   </div>
 </div>
 
+<!-- ===== MODAL PASSWORD LINK TERKUNCI ===== -->
+<div class="overlay hidden" id="unlockOverlay">
+  <div class="panel login-panel">
+    <button type="button" class="modal-close" id="closeUnlockBtn" aria-label="Tutup">&times;</button>
+    <h3>🔒 Link Terkunci</h3>
+    <p class="unlock-label" id="unlockLabel"></p>
+    <div class="error-msg hidden" id="unlockError"></div>
+    <form id="unlockForm">
+      <div class="field">
+        <label for="unlockPassword">Password</label>
+        <input id="unlockPassword" type="password" autocomplete="off" required />
+      </div>
+      <button class="btn btn-primary" style="width:100%" type="submit">Buka Link</button>
+    </form>
+  </div>
+</div>
+
 <section class="hero-band">
   <div class="hero-meta">
     <span class="pill" id="countUpcoming">Mendatang: 0</span>
     <span class="pill orange" id="countDone">Selesai: 0</span>
     <span class="pill blue" id="countAll">Semua: 0</span>
-    <span class="pill today-pill" id="countToday" style="display:none;">Ada rapat hari ini</span>
+    <span class="pill orange" id="countToday" style="display:none;">Ada rapat hari ini</span>
   </div>
 </section>
 
 <div class="toolbar">
   <input type="search" id="searchInput" placeholder="Cari judul rapat..." />
   <select id="filterStatus">
-    <option value="active" selected>Hari ini &amp; akan datang</option>
-    <option value="today">Hari ini</option>
-    <option value="upcoming">Akan datang</option>
+    <option value="upcoming" selected>Akan datang</option>
     <option value="done">Sudah selesai</option>
     <option value="all">Semua</option>
   </select>
@@ -75,10 +87,9 @@
   <img src="assets/img/iso.png" alt="ISO" class="footer-sponsor" />
 </footer>
 
-<script>
-  ["assets/js/config.js", "assets/js/api.js", "assets/js/app.js"].forEach(function (f) {
-    document.write('<script src="' + f + '?t=' + BUST + '"><\/script>');
-  });
-</script>
+<script src="assets/js/config.js?v=8"></script>
+<script src="assets/js/crypto.js?v=8"></script>
+<script src="assets/js/api.js?v=8"></script>
+<script src="assets/js/app.js?v=8"></script>
 </body>
 </html>

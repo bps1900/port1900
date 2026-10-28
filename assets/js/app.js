@@ -1,8 +1,9 @@
 /**
  * Logic halaman publik: ambil data rapat dari Apps Script,
  * render sebagai timeline yang dikelompokkan per tanggal,
- * dengan status: Hari ini / Akan datang / Selesai, mendukung jadwal rentang,
- * dan paginasi (10 rapat/halaman).
+ * dengan filter status (default: Akan datang) dan paginasi (10 rapat/halaman).
+ * Link yang diberi password tampil sebagai tombol 🔒 dan baru terbuka
+ * setelah pengunjung memasukkan password yang benar.
  */
 
 const PER_PAGE = 10;
@@ -10,12 +11,11 @@ const PER_PAGE = 10;
 let ALL_MEETINGS = [];
 let currentPage = 1;
 
+// Daftar link terkunci pada render saat ini (diakses lewat data-lock="indeks")
+let LOCKED_LINKS = [];
+
 document.getElementById("orgName").textContent = CONFIG.NAMA_ORGANISASI;
 
-/**
- * Google Apps Script mengirim tanggal/jam sebagai objek Date yang otomatis
- * diserialisasi ke ISO string UTC. Data sebenarnya WIB (UTC+7), jadi dikoreksi +7 jam.
- */
 function normalizeDate(value) {
   if (!value) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -34,48 +34,26 @@ function normalizeTime(value) {
   return wib.toISOString().slice(11, 16);
 }
 
-function formatTanggal(dateStr, opts) {
+function formatTanggal(dateStr) {
   try {
     const d = new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString("id-ID", opts || { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   } catch {
     return dateStr;
   }
 }
 
-// Label tanggal: 1 hari -> "Selasa, 27 Oktober 2026"; rentang -> "Selasa, 27 – Kamis, 29 Oktober 2026"
-function formatRentang(start, end) {
-  if (!end || end <= start) return formatTanggal(start);
-  const sameMonth = start.slice(0, 7) === end.slice(0, 7);
-  if (sameMonth) {
-    const a = formatTanggal(start, { weekday: "long", day: "numeric" });
-    const b = formatTanggal(end, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    return `${a} – ${b}`;
-  }
-  return `${formatTanggal(start)} – ${formatTanggal(end)}`;
-}
-
-// Tanggal hari ini dalam WIB (UTC+7), format "YYYY-MM-DD".
 function todayWIB() {
   return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-function dayDiff(a, b) {
-  return Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+function isToday(dateStr) {
+  return dateStr === todayWIB();
 }
 
-/**
- * Status efektif rapat:
- *  - "done"     : admin menandai "Sudah selesai", ATAU seluruh jadwal sudah lewat
- *  - "today"    : hari ini berada di dalam jadwal (tanggal mulai <= hari ini <= tanggal selesai)
- *  - "upcoming" : jadwal mulai setelah hari ini
- */
 function effectiveStatus(m) {
   if (m.status === "done") return "done";
-  if (!m.date) return "upcoming";
-  const t = todayWIB();
-  if (m.lastDate < t) return "done";
-  if (m.date <= t) return "today";
+  if (m.date && m.date < todayWIB()) return "done";
   return "upcoming";
 }
 
@@ -83,85 +61,41 @@ function escapeHtml(str = "") {
   return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-/**
- * Kolom "otherLink" di sheet menyimpan salah satu format berikut:
- *  - [{"label":"..","url":".."}, ...]                 (format lama, tanpa rentang)
- *  - {"links":[{label,url},...], "endDate":"YYYY-MM-DD"}  (format baru, jadwal rentang)
- *  - URL polos (data paling lama)
- */
-function parseMeta(raw) {
-  const meta = { links: [], endDate: "" };
-  if (!raw) return meta;
-  const clean = (arr) =>
-    (Array.isArray(arr) ? arr : [])
-      .filter((x) => x && x.url)
-      .map((x) => ({ label: x.label || "Link Lainnya", url: x.url }));
+function parseOtherLinks(raw) {
+  if (!raw) return [];
   try {
-    const p = JSON.parse(raw);
-    if (Array.isArray(p)) {
-      meta.links = clean(p);
-      return meta;
-    }
-    if (p && typeof p === "object") {
-      meta.links = clean(p.links);
-      meta.endDate = /^\d{4}-\d{2}-\d{2}$/.test(p.endDate || "") ? p.endDate : "";
-      return meta;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((x) => x && x.url).map((x) => ({ label: x.label || "Link Lainnya", url: x.url }));
     }
   } catch (e) {
-    // bukan JSON -> URL polos
+    // bukan JSON -> data lama, anggap URL polos
   }
-  meta.links = [{ label: "Link Lainnya", url: String(raw) }];
-  return meta;
+  return [{ label: "Link Lainnya", url: String(raw) }];
 }
 
-// Warna tombol link custom: dipilih otomatis dari judulnya (selalu sama untuk judul yang sama)
-const CUSTOM_COLORS = ["#6D28D9", "#0369A1", "#BE185D", "#B45309", "#0F766E", "#4D7C0F", "#9F1239", "#4338CA", "#C2410C", "#0E7490"];
-function colorFor(label) {
-  let h = 0;
-  const s = String(label).toLowerCase();
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return CUSTOM_COLORS[h % CUSTOM_COLORS.length];
-}
-
-// Ikon tombol link custom: dipilih otomatis dari kata kunci pada judul.
-// Urutan penting: aturan paling atas yang cocok dipakai. Tambah baris baru di sini kalau perlu.
-const ICON_RULES = [
-  [/dokumentasi|foto|galeri|gambar|album/, "📷"],
-  [/video|rekaman|record|youtube|streaming/, "🎬"],
-  [/undangan|surat|nota dinas|\bsk\b|\btor\b|edaran|\bst\b/, "✉️"],
-  [/notulen|notulensi|risalah|catatan|\bmom\b/, "📝"],
-  [/absen|hadir|presensi|peserta/, "✅"],
-  [/\blk\b|laporan|report|rekap|hasil/, "📑"],
-  [/data|dataset|tabel|rincian|\bdds\b/, "📊"],
-  [/jadwal|agenda|rundown|susunan acara|kalender/, "🗓️"],
-  [/panduan|juknis|petunjuk|manual|pedoman|tutorial|\bsop\b/, "📘"],
-  [/paparan|presentasi|slide|\bppt\b|materi/, "📽️"],
-  [/form|kuesioner|kuisioner|survei|survey|isian|quiz|kuis/, "📋"],
-  [/excel|xls|spreadsheet|sheet/, "📗"],
-  [/\bpdf\b/, "📕"],
-  [/evaluasi|penilaian|nilai|feedback|umpan/, "⭐"],
-  [/grup|group|whatsapp|\bwa\b|telegram|diskusi|chat/, "💬"],
-  [/zoom|meet|meeting|webinar|teams/, "🎥"],
-  [/background|backdrop|latar/, "🖼️"],
-  [/sertifikat|e-?cert/, "🎓"],
-  [/website|web|portal|situs|aplikasi|app\b/, "🌐"],
-  [/folder|drive|arsip|dokumen|berkas|file/, "📁"],
-];
-function iconFor(label) {
-  const s = String(label).toLowerCase();
-  for (const [re, icon] of ICON_RULES) if (re.test(s)) return icon;
-  return "🔗";
+/**
+ * Buat satu tombol link. Kalau link terkunci -> <button> yang membuka
+ * dialog password; kalau tidak -> <a> biasa.
+ */
+function linkBtn({ cls, url, iconHtml, label }) {
+  if (Lock.isLocked(url)) {
+    const idx = LOCKED_LINKS.push({ enc: url, label }) - 1;
+    return `<button type="button" class="link-btn ${cls}" data-lock="${idx}">${iconHtml}🔒 ${escapeHtml(label)}</button>`;
+  }
+  return `<a class="link-btn ${cls}" href="${escapeHtml(url)}" target="_blank" rel="noopener">${iconHtml}${escapeHtml(label)}</a>`;
 }
 
 function linkButtonsHtml(m) {
+  const icon = (src) => `<img src="assets/img/${src}" alt="" class="link-btn-icon"> `;
   const btns = [];
-  if (m.zoomLink)       btns.push(`<a class="link-btn zoom"       href="${m.zoomLink}"       target="_blank" rel="noopener"><img src="assets/img/zoom.png"          alt="" class="link-btn-icon"> Join Zoom</a>`);
-  if (m.virtualBgLink)  btns.push(`<a class="link-btn virtualbg"  href="${m.virtualBgLink}"  target="_blank" rel="noopener"><img src="assets/img/vb.png"            alt="" class="link-btn-icon"> Virtual Background</a>`);
-  if (m.youtubeLink)    btns.push(`<a class="link-btn youtube"    href="${m.youtubeLink}"    target="_blank" rel="noopener"><img src="assets/img/youtube.png"        alt="" class="link-btn-icon"> YouTube</a>`);
-  if (m.materialLink)   btns.push(`<a class="link-btn material"   href="${m.materialLink}"   target="_blank" rel="noopener"><img src="assets/img/materi.png"         alt="" class="link-btn-icon"> Materi</a>`);
-  if (m.attendanceLink) btns.push(`<a class="link-btn attendance" href="${m.attendanceLink}" target="_blank" rel="noopener"><img src="assets/img/daftar%20hadir.png" alt="" class="link-btn-icon"> Daftar Hadir</a>`);
-  m.links.forEach((l) => {
-    btns.push(`<a class="link-btn custom" style="background:${colorFor(l.label)}" href="${l.url}" target="_blank" rel="noopener">${iconFor(l.label)} ${escapeHtml(l.label)}</a>`);
+  if (m.zoomLink)       btns.push(linkBtn({ cls: "zoom",       url: m.zoomLink,       iconHtml: icon("zoom.png"),          label: "Join Zoom" }));
+  if (m.virtualBgLink)  btns.push(linkBtn({ cls: "virtualbg",  url: m.virtualBgLink,  iconHtml: icon("vb.png"),            label: "Virtual Background" }));
+  if (m.youtubeLink)    btns.push(linkBtn({ cls: "youtube",    url: m.youtubeLink,    iconHtml: icon("youtube.png"),       label: "YouTube" }));
+  if (m.materialLink)   btns.push(linkBtn({ cls: "material",   url: m.materialLink,   iconHtml: icon("materi.png"),        label: "Materi" }));
+  if (m.attendanceLink) btns.push(linkBtn({ cls: "attendance", url: m.attendanceLink, iconHtml: icon("daftar%20hadir.png"), label: "Daftar Hadir" }));
+  parseOtherLinks(m.otherLink).forEach((l) => {
+    btns.push(linkBtn({ cls: "", url: l.url, iconHtml: "🔗 ", label: l.label }));
   });
   if (btns.length === 0) return `<span style="color:var(--text-muted);font-size:.85rem;">Belum ada link</span>`;
   const remainder = btns.length % 3;
@@ -174,25 +108,20 @@ function linkButtonsHtml(m) {
 /* ---------- Hitung jumlah & update pill/opsi filter ---------- */
 function updateCounts() {
   const total = ALL_MEETINGS.length;
-  const count = (s) => ALL_MEETINGS.filter((m) => m.effStatus === s).length;
-  const today = count("today");
-  const upcoming = count("upcoming");
-  const done = count("done");
+  const upcoming = ALL_MEETINGS.filter((m) => m.effStatus === "upcoming").length;
+  const done = total - upcoming;
 
   document.getElementById("countAll").textContent = `Semua: ${total}`;
   document.getElementById("countUpcoming").textContent = `Mendatang: ${upcoming}`;
   document.getElementById("countDone").textContent = `Selesai: ${done}`;
 
   const sel = document.getElementById("filterStatus");
-  sel.querySelector('option[value="active"]').textContent = `Hari ini & akan datang (${today + upcoming})`;
-  sel.querySelector('option[value="today"]').textContent = `Hari ini (${today})`;
   sel.querySelector('option[value="upcoming"]').textContent = `Akan datang (${upcoming})`;
   sel.querySelector('option[value="done"]').textContent = `Sudah selesai (${done})`;
   sel.querySelector('option[value="all"]').textContent = `Semua (${total})`;
 
-  const pill = document.getElementById("countToday");
-  pill.textContent = `Ada rapat hari ini (${today})`;
-  pill.style.display = today > 0 ? "inline-block" : "none";
+  const hasToday = ALL_MEETINGS.some((m) => m.effStatus === "upcoming" && isToday(m.date));
+  document.getElementById("countToday").style.display = hasToday ? "inline-block" : "none";
 }
 
 /* ---------- Paginasi ---------- */
@@ -245,21 +174,9 @@ document.getElementById("pagination").addEventListener("click", (e) => {
 /* ---------- Render ---------- */
 function emptyMessage(status, query) {
   if (query) return "Tidak ada rapat yang cocok dengan pencarian kamu.";
-  if (status === "active") return "Belum ada rapat hari ini maupun mendatang. Lihat filter “Sudah selesai” untuk rapat sebelumnya.";
-  if (status === "today") return "Tidak ada rapat hari ini.";
-  if (status === "upcoming") return "Belum ada rapat mendatang.";
+  if (status === "upcoming") return "Belum ada rapat mendatang. Lihat filter “Sudah selesai” untuk rapat sebelumnya.";
   if (status === "done") return "Belum ada rapat yang selesai.";
   return "Belum ada rapat.";
-}
-
-function rangeChipHtml(m) {
-  if (!m.endDate) return "";
-  const total = dayDiff(m.date, m.endDate) + 1;
-  if (m.effStatus === "today") {
-    const now = dayDiff(m.date, todayWIB()) + 1;
-    return `<span class="range-chip">Hari ke-${now} dari ${total}</span>`;
-  }
-  return `<span class="range-chip">${total} hari</span>`;
 }
 
 function render() {
@@ -268,23 +185,17 @@ function render() {
 
   const filtered = ALL_MEETINGS.filter((m) => {
     const matchQuery = !query || m.title.toLowerCase().includes(query);
-    let matchStatus;
-    if (status === "all") matchStatus = true;
-    else if (status === "active") matchStatus = m.effStatus === "today" || m.effStatus === "upcoming";
-    else matchStatus = m.effStatus === status;
+    const matchStatus = status === "all" || m.effStatus === status;
     return matchQuery && matchStatus;
   });
 
-  // Urutan: hari ini -> mendatang (terdekat di atas) -> selesai (terbaru di atas).
   const key = (m) => m.date + " " + m.time;
-  const asc = (a, b) => key(a).localeCompare(key(b));
-  const desc = (a, b) => key(b).localeCompare(key(a));
-  const sorted = []
-    .concat(filtered.filter((m) => m.effStatus === "today").sort(asc))
-    .concat(filtered.filter((m) => m.effStatus === "upcoming").sort(asc))
-    .concat(filtered.filter((m) => m.effStatus === "done").sort(desc));
+  const upcoming = filtered.filter((m) => m.effStatus === "upcoming").sort((a, b) => key(a).localeCompare(key(b)));
+  const done = filtered.filter((m) => m.effStatus === "done").sort((a, b) => key(b).localeCompare(key(a)));
+  const sorted = upcoming.concat(done);
 
   const timeline = document.getElementById("timeline");
+  LOCKED_LINKS = [];
 
   if (sorted.length === 0) {
     timeline.innerHTML = `<div class="empty-state">${escapeHtml(emptyMessage(status, query))}</div>`;
@@ -298,26 +209,23 @@ function render() {
 
   const pageItems = sorted.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  // Kelompokkan per rentang tanggal (urutan kemunculan dipertahankan)
   const groups = new Map();
   pageItems.forEach((m) => {
-    const k = m.date + "|" + m.endDate;
-    if (!groups.has(k)) groups.set(k, { date: m.date, endDate: m.endDate, items: [] });
-    groups.get(k).items.push(m);
+    if (!groups.has(m.date)) groups.set(m.date, []);
+    groups.get(m.date).push(m);
   });
 
   let html = "";
-  groups.forEach((g) => {
-    const isTodayGroup = g.items.some((m) => m.effStatus === "today");
-    html += `<div class="day-group ${isTodayGroup ? "is-today" : ""}">
-      <div class="day-label"><div class="day-dot"></div><span>${escapeHtml(formatRentang(g.date, g.endDate))}</span></div>`;
-    g.items.forEach((m) => {
-      const cls = m.effStatus === "done" ? "done" : m.effStatus === "today" ? "today" : "";
+  groups.forEach((items, date) => {
+    html += `<div class="day-group">
+      <div class="day-label"><div class="day-dot"></div><span>${formatTanggal(date)}</span></div>`;
+    items.forEach((m) => {
+      const cls = m.effStatus === "done" ? "done" : isToday(m.date) ? "today" : "";
       html += `
         <div class="meeting-card ${cls}">
           <div class="meeting-top">
             <div class="meeting-title">${escapeHtml(m.title)}</div>
-            <div class="meeting-time">🕒 ${escapeHtml(m.time || "-")}${rangeChipHtml(m)}</div>
+            <div class="meeting-time">🕒 ${escapeHtml(m.time || "-")}</div>
           </div>
           ${m.description ? `<div class="meeting-desc">${escapeHtml(m.description)}</div>` : ""}
           <div class="meeting-links">${linkButtonsHtml(m)}</div>
@@ -340,16 +248,12 @@ async function init() {
     const res = await Api.listMeetings();
     if (!res.success) throw new Error(res.message || "Gagal memuat data");
     ALL_MEETINGS = (res.data || []).map((m) => {
-      const meta = parseMeta(m.otherLink);
       const item = {
         ...m,
         title: m.title || "",
         date: normalizeDate(m.date),
         time: normalizeTime(m.time),
-        links: meta.links,
       };
-      item.endDate = meta.endDate && meta.endDate > item.date ? meta.endDate : "";
-      item.lastDate = item.endDate || item.date;
       item.effStatus = effectiveStatus(item);
       return item;
     });
@@ -369,6 +273,74 @@ document.getElementById("searchInput").addEventListener("input", () => {
 document.getElementById("filterStatus").addEventListener("change", () => {
   currentPage = 1;
   render();
+});
+
+/* ---------- Modal Password Link Terkunci ---------- */
+const unlockOverlay = document.getElementById("unlockOverlay");
+const unlockForm = document.getElementById("unlockForm");
+const unlockError = document.getElementById("unlockError");
+const unlockPassword = document.getElementById("unlockPassword");
+let currentLocked = null;
+
+function openUnlock(item) {
+  currentLocked = item;
+  document.getElementById("unlockLabel").textContent = `“${item.label}” dilindungi password.`;
+  unlockError.classList.add("hidden");
+  unlockForm.reset();
+  unlockOverlay.classList.remove("hidden");
+  unlockPassword.focus();
+}
+function closeUnlock() {
+  unlockOverlay.classList.add("hidden");
+  currentLocked = null;
+}
+
+document.getElementById("timeline").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-lock]");
+  if (!btn) return;
+  const item = LOCKED_LINKS[Number(btn.dataset.lock)];
+  if (item) openUnlock(item);
+});
+document.getElementById("closeUnlockBtn").addEventListener("click", closeUnlock);
+unlockOverlay.addEventListener("click", (e) => {
+  if (e.target === unlockOverlay) closeUnlock();
+});
+
+unlockForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!currentLocked) return;
+  unlockError.classList.add("hidden");
+
+  if (!window.crypto || !window.crypto.subtle) {
+    unlockError.textContent = "Browser/koneksi ini tidak mendukung. Buka lewat HTTPS.";
+    unlockError.classList.remove("hidden");
+    return;
+  }
+
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  const originalLabel = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Memeriksa...";
+
+  try {
+    const url = await Lock.decrypt(currentLocked.enc, unlockPassword.value);
+    if (!/^https?:\/\//i.test(url)) throw new Error("bad url");
+    const w = window.open(url, "_blank", "noopener");
+    if (w) {
+      closeUnlock();
+    } else {
+      // Popup diblokir browser -> tampilkan link yang bisa diklik langsung
+      unlockError.classList.remove("hidden");
+      unlockError.innerHTML = `Password benar. <a href="${escapeHtml(url)}" target="_blank" rel="noopener">Klik di sini untuk membuka link</a>.`;
+    }
+  } catch (err) {
+    unlockError.textContent = "Password salah. Coba lagi.";
+    unlockError.classList.remove("hidden");
+    unlockPassword.select();
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
+  }
 });
 
 /* ---------- Modal Login Admin ---------- */
@@ -391,7 +363,9 @@ loginOverlay.addEventListener("click", (e) => {
   if (e.target === loginOverlay) closeLogin();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !loginOverlay.classList.contains("hidden")) closeLogin();
+  if (e.key !== "Escape") return;
+  if (!loginOverlay.classList.contains("hidden")) closeLogin();
+  if (!unlockOverlay.classList.contains("hidden")) closeUnlock();
 });
 
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
